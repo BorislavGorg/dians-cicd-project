@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7 col-md-9">
+
+            <div class="text-center mb-4">
+                <h2 class="fw-bold"> Price Forecast</h2>
+                <p class="text-muted mb-0">
+                    LSTM 7-day projection for <strong>{{ symbol }}</strong>
+                </p>
+            </div>
+
+            <div class="card shadow-lg border-0">
+                <div class="card-header bg-dark text-white text-center">
+                    <strong>Forecasted Closing Prices</strong>
+                </div>
+
+                <div class="card-body p-0">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th class="text-end">Forecasted Close</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for day, value in forecast_rows %}
+                                <tr>
+                                    <td>{{ day }}</td>
+                                    <td class="text-end fw-semibold">
+                                        {{ "%.6f"|format(value) }}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <a href="/coin?symbol={{ symbol }}" class="btn btn-outline-primary px-4">
+                    ← Back to Coin
+                </a>
+            </div>
+
+        </div>
+    </div>
+</section>
+{% endblock %}

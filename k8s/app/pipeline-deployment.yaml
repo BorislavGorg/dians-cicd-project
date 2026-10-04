@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipeline-service
+  namespace: dians-crypto
+  labels:
+    app: pipeline-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipeline-service
+  template:
+    metadata:
+      labels:
+        app: pipeline-service
+    spec:
+      containers:
+        - name: pipeline-service
+          image: borislavgorg/dians-pipeline-service:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5001
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dians-app-secret
+                  key: DATABASE_URL
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5001
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi

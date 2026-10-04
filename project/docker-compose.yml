@@ -1,0 +1,58 @@
+version: "3.9"
+
+services:
+
+  db:
+    image: postgres:16-alpine
+    container_name: dians_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: dejvid77
+      POSTGRES_DB: dians
+    ports:
+      - "5432:5432"
+    volumes:
+      - dians_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  pipeline_service:
+    build: ./pipeline_service
+    container_name: pipeline_service
+    ports:
+      - "5001:5001"
+    environment:
+      DATABASE_URL: "postgresql://postgres:dejvid77@db:5432/dians"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  technical_analysis_service:
+    build: ./technical_analysis_service
+    container_name: technical_analysis_service
+    ports:
+      - "5002:5002"
+
+  main_app:
+    build: ./main_app
+    container_name: main_app
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: "postgresql://postgres:dejvid77@db:5432/dians"
+      FETCH_MICROSERVICE_URL: "http://pipeline_service:5001"
+      TECHNICAL_ANALYSIS_MICROSERVICE_URL: "http://technical_analysis_service:5002"
+    depends_on:
+      db:
+        condition: service_healthy
+      pipeline_service:
+        condition: service_started
+      technical_analysis_service:
+        condition: service_started
+
+volumes:
+  dians_db_data:

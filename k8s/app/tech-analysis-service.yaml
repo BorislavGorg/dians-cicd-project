@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: technical-analysis-service
+  namespace: dians-crypto
+  labels:
+    app: technical-analysis-service
+spec:
+  type: ClusterIP
+  selector:
+    app: technical-analysis-service
+  ports:
+    - name: http
+      port: 5002
+      targetPort: 5002

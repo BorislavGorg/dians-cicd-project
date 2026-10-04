@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-config
+  namespace: dians-crypto
+  labels:
+    app: dians-db
+data:
+  POSTGRES_DB: dians
+  PGDATA: /var/lib/postgresql/data/pgdata

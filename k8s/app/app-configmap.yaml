@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dians-app-config
+  namespace: dians-crypto
+  labels:
+    app.kubernetes.io/part-of: dians-crypto-analytics
+data:
+  FETCH_MICROSERVICE_URL: "http://pipeline-service:5001"
+  TECHNICAL_ANALYSIS_MICROSERVICE_URL: "http://technical-analysis-service:5002"

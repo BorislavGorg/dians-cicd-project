@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="mk">
+<head>
+  <meta charset="utf-8"/>
+  <title>Coin Details - {{ symbol }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+  <style>
+    body {
+        font-family: Arial, Helvetica, sans-serif;
+        margin:0;
+        background:#f3f5fa;
+        color:#222;
+    }
+
+    .navbar {
+        background:#ffffff;
+        border-bottom:1px solid #ccc;
+        padding:15px 30px;
+        display:flex;
+        align-items:center;
+        gap:25px;
+    }
+
+    .logo {
+        font-size:22px;
+        font-weight:bold;
+        margin-right:40px;
+    }
+
+    .navbar a {
+        text-decoration:none;
+        color:#333;
+        font-size:16px;
+        font-weight:500;
+    }
+
+    .container {
+        max-width:1000px;
+        margin:24px auto;
+        padding:0 16px;
+    }
+
+    .header-row {
+        display:flex;
+        justify-content:space-between;
+        align-items:flex-start;
+        gap:12px;
+        margin-bottom:18px;
+        flex-wrap:wrap;
+    }
+
+    .title {
+        font-size:26px;
+        font-weight:700;
+    }
+
+    .price {
+        font-size:20px;
+        color:#0b6ef6;
+        font-weight:700;
+        margin-top:4px;
+    }
+
+    .actions{
+       display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 20px 0;
+    }
+
+    .btn {
+        padding: 10px 18px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        text-decoration: none;
+        display: inline-block;
+        transition: all 0.2s ease-in-out;
+        border: 2px solid transparent;
+    }
+
+    .btn-blue {
+        background-color: #1d4ed8;
+        border-color: #1d4ed8;
+        color: white;
+    }
+    .btn-blue:hover {
+        background-color: #153fa6;
+        border-color: #153fa6;
+    }
+
+    .btn-green {
+        background-color: #059669;
+        border-color: #059669;
+        color: white;
+    }
+    .btn-green:hover {
+        background-color: #047857;
+        border-color: #047857;
+    }
+
+    .btn-purple {
+        background-color: #7c3aed;
+        border-color: #7c3aed;
+        color: white;
+    }
+    .btn-purple:hover {
+        background-color: #5b21b6;
+        border-color: #5b21b6;
+    }
+
+    .btn-gray {
+        background-color: #4b5563;
+        border-color: #4b5563;
+        color: white;
+    }
+    .btn-gray:hover {
+        background-color: #374151;
+        border-color: #374151;
+    }
+
+    .panel {
+        background:#fff;
+        padding:14px;
+        border-radius:10px;
+        box-shadow:0 1px 6px rgba(0,0,0,0.04);
+    }
+
+    .top-grid {
+        display:grid;
+        grid-template-columns:1fr 320px;
+        gap:18px;
+        margin-bottom:18px;
+    }
+
+    .chart {
+        height:260px;
+        border-radius:8px;
+        background:linear-gradient(180deg,#f8fbff,#eef6ff);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        color:#777;
+        font-weight:600;
+    }
+
+    .metrics {
+        display:flex;
+        flex-direction:column;
+        gap:10px;
+    }
+
+    .metric {
+        background:#fff;
+        padding:10px;
+        border-radius:8px;
+        border:1px solid #f0f2f7;
+    }
+
+    .metric .label {
+        color:#666;
+        font-size:13px;
+    }
+
+    .metric .value {
+        font-size:16px;
+        font-weight:700;
+        margin-top:6px;
+    }
+
+    h3 {
+        margin:0 0 8px 0;
+        font-size:18px;
+    }
+
+    table {
+        width:100%;
+        border-collapse:collapse;
+        margin-top:12px;
+    }
+
+    th, td {
+        padding:10px 12px;
+        border-bottom:1px solid #f1f3f6;
+        font-size:14px;
+        text-align:left;
+    }
+
+    @media (max-width:840px) {
+        .top-grid {
+            grid-template-columns:1fr;
+        }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="navbar">
+    <div class="logo">APP Logo</div>
+    <a href="/">Dashboard</a>
+    <a href="/compare">Compare</a>
+    <a href="/favorites">Favourites</a>
+    <a href="/help">Help</a>
+</div>
+
+<div class="container">
+
+    <div class="header-row">
+        <div>
+            <div class="title">{{ full_name }} ({{ symbol }})</div>
+            <div class="price">
+                Latest:
+                {% if latest_close is not none %}
+                    ${{ "%.2f"|format(latest_close) }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </div>
+
+
+            <div class="actions">
+                <a href="/analysis?symbol={{ symbol }}" class="btn btn-blue">Technical Analysis</a>
+                <a href="/lstm_train?symbol={{ symbol }}" class="btn btn-green">Train LSTM</a>
+                <a href="/lstm_forecast?symbol={{ symbol }}&days=7" class="btn btn-purple">LSTM Forecast</a>
+                <a href="/export?symbol={{ symbol }}" class="btn btn-gray">Export CSV</a>
+            </div>
+        </div>
+
+        <a class="btn secondary" href="/">Back</a>
+    </div>
+
+    <div class="top-grid">
+        <div class="panel">
+            <h3>Price history (last 365 days)</h3>
+            <canvas id="priceChart" height="120"></canvas>
+            <h3 style="margin-top:14px;">Volume (last 365 days)</h3>
+            <canvas id="volumeChart" height="120"></canvas>
+        </div>
+
+        <div class="metrics">
+            <div class="metric">
+                <div class="label">Market Cap</div>
+                <div class="value">
+                    {% if market_cap is not none %}
+                        ${{ "%.2f"|format(market_cap) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="metric">
+                <div class="label">24h Volume</div>
+                <div class="value">
+                    {% if volume_24h is not none %}
+                        ${{ "%.2f"|format(volume_24h) }}
+                    {% else %}
+                        N/A
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="metric">
+                <div class="label">Circulating Supply</div>
+                <div class="value">
+                    {{ circulating_supply if circulating_supply is not none else 'N/A' }}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3>Daily statistics (last 30 days)</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Open</th>
+                    <th>High</th>
+                    <th>Low</th>
+                    <th>Close</th>
+                    <th>Volume</th>
+                    <th>Market Cap</th>
+                    <th>Change %</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for r in stats_rows %}
+                <tr>
+                    <td>{{ r.date }}</td>
+                    <td>{{ "%.2f"|format(r.open) if r.open is not none else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(r.high) if r.high is not none else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(r.low) if r.low is not none else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(r.close) if r.close is not none else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(r.volume) if r.volume is not none else 'N/A' }}</td>
+                    <td>{{ "%.2f"|format(r.market_cap) if r.market_cap is not none else 'N/A' }}</td>
+                    <td>
+                        {% if r.change_pct is not none %}
+                            {{ "%.2f"|format(r.change_pct) }}%
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const labels = {{ chart_labels|tojson }};
+  const closeData = {{ chart_close|tojson }};
+  const volData = {{ chart_volume|tojson }};
+
+  const priceCtx = document.getElementById('priceChart');
+  new Chart(priceCtx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Close',
+        data: closeData,
+        tension: 0.15,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: { x: { display: false } }
+    }
+  });
+
+  const volumeCtx = document.getElementById('volumeChart');
+  new Chart(volumeCtx, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Volume',
+        data: volData,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: true } },
+      scales: { x: { display: false } }
+    }
+  });
+</script>
+
+</body>
+</html>

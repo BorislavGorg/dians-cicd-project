@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container my-5">
+
+    <div class="text-center mb-5">
+        <h2 class="fw-bold">LSTM Model Performance</h2>
+        <p class="text-muted">Training summary for <strong>{{ symbol }}</strong></p>
+    </div>
+
+    <div class="row text-center mb-4">
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">RMSE</h6>
+                    <h4 class="fw-bold">{{ rmse }}</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">MAPE (%)</h6>
+                    <h4 class="fw-bold">{{ mape }}</h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0">
+                <div class="card-body">
+                    <h6 class="text-muted">R² Score</h6>
+                    <h4 class="fw-bold">{{ r2 }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <div class="card shadow-lg border-0 mb-4">
+        <div class="card-body text-center">
+            <h5 class="mb-3">Actual vs Predicted Price</h5>
+
+            <img src="{{ plot_data }}"
+                 class="img-fluid rounded"
+                 alt="LSTM Prediction Plot">
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="/lstm_forecast?symbol={{ symbol }}&days=7"
+           class="btn btn-primary btn-lg px-5">
+            Predict 7-Day Forecast
+        </a>
+    </div>
+
+</div>
+{% endblock %}

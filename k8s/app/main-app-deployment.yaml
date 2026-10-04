@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: main-app
+  namespace: dians-crypto
+  labels:
+    app: main-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: main-app
+  template:
+    metadata:
+      labels:
+        app: main-app
+    spec:
+      containers:
+        - name: main-app
+          image: borislavgorg/dians-main-app:latest
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 5000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dians-app-secret
+                  key: DATABASE_URL
+          envFrom:
+            - configMapRef:
+                name: dians-app-config
+          # Стартот е бавен поради TensorFlow/LSTM зависностите,
+          # затоа probes се со поголеми времиња и TCP проверка
+          startupProbe:
+            tcpSocket:
+              port: 5000
+            failureThreshold: 30
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: 5000
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 5000
+            periodSeconds: 20
+          resources:
+            requests:
+              cpu: 250m
+              memory: 512Mi
+            limits:
+              cpu: "1"
+              memory: 2Gi

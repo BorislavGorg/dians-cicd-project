@@ -1,0 +1,5 @@
+.idea/
+__pycache__/
+models_lstm/
+*.h5
+*.save

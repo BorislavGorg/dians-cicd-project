@@ -1,0 +1,16 @@
+# Headless Service - им дава стабилно DNS име (db) на pod-овите од StatefulSet-от
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: dians-crypto
+  labels:
+    app: dians-db
+spec:
+  clusterIP: None
+  selector:
+    app: dians-db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
