@@ -112,7 +112,10 @@ def train_lstm(
         "mape": float(mape),
         "r2": float(r2),
         "history": history.history,
-        "plot_base64": img_uri
+        "plot_base64": img_uri,
+        "y_true": [float(v) for v in y_test_inv.flatten()],
+        "y_pred": [float(v) for v in y_pred_inv.flatten()],
+        "test_dates": [d.strftime("%Y-%m-%d") for d in df.index[-len(y_test_inv):]],
     }
 
 

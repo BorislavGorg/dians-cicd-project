@@ -1,215 +1,133 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Dashboard</title>
+{% extends "base.html" %}
+{% block title %}Markets{% endblock %}
 
-    <style>
-        body {
-            margin: 0;
-            font-family: Arial, sans-serif;
-            background: #f3f5fa;
-        }
-
-        .navbar {
-            background: #ffffff;
-            border-bottom: 1px solid #ccc;
-            padding: 15px 30px;
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-
-        .logo {
-            font-size: 22px;
-            font-weight: bold;
-            margin-right: 40px;
-        }
-
-        .navbar a {
-            text-decoration: none;
-            color: #333;
-            font-size: 16px;
-            font-weight: 500;
-        }
-
-        h1 {
-            margin: 30px;
-            font-size: 28px;
-        }
-
-        .select-container {
-            margin: 0 30px 30px 30px;
-        }
-
-        select {
-            padding: 10px;
-            font-size: 15px;
-            border-radius: 6px;
-            border: 1px solid #ccc;
-            min-width: 200px;
-        }
-
-        button {
-            padding: 10px 16px;
-            font-size: 15px;
-            border-radius: 6px;
-            border: none;
-            background: #1f6feb;
-            color: white;
-            cursor: pointer;
-        }
-
-        .export-btn {
-            padding: 10px 16px;
-            font-size: 15px;
-            border-radius: 6px;
-            background: #16a34a;
-            color: white;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .export-btn:hover {
-            background: #15803d;
-        }
-
-        .pipeline-btn {
-            background: #111827;
-        }
-
-        .card-container {
-            display: flex;
-            gap: 20px;
-            margin: 0 30px 30px 30px;
-        }
-
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            width: 220px;
-            box-shadow: 0 1px 6px rgba(0, 0, 0, 0.08);
-        }
-
-        .card h3 {
-            margin: 0 0 10px 0;
-            font-size: 18px;
-            color: #555;
-        }
-
-        .card p {
-            margin: 0;
-            font-size: 20px;
-            font-weight: bold;
-        }
-
-        table {
-            width: calc(100% - 60px);
-            margin: 0 30px 50px 30px;
-            border-collapse: collapse;
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 1px 6px rgba(0,0,0,0.05);
-        }
-
-        th {
-            background: #f0f2f7;
-            padding: 14px;
-            text-align: left;
-            font-size: 15px;
-            color: #333;
-        }
-
-        td {
-            padding: 14px;
-            border-bottom: 1px solid #eee;
-            font-size: 15px;
-        }
-
-        .green {
-            color: green;
-            font-weight: bold;
-        }
-    </style>
-</head>
-<body>
-
-<div class="navbar">
-    <div class="logo">APP Logo</div>
-    <a href="/">Dashboard</a>
-    <a href="/compare">Compare</a>
-    <a href="/favorites">Favourites</a>
-    <a href="/help">Help</a>
-</div>
-
-<h1>Dashboard</h1>
-
-<div class="select-container">
-    <form method="get" action="/" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-        <select name="symbol">
-            {% for s in symbols %}
-                <option value="{{ s }}" {% if s == 'BTC' %}selected{% endif %}>
-                    {{ s }}
-                </option>
-            {% endfor %}
-        </select>
-
-        <button type="submit">Go</button>
-
-        <a href="/export" class="export-btn">
-            Export all coins to CSV
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Crypto Markets</h1>
+        <p>
+            {{ coins|length }} coins tracked
+            {% if last_update %}· last update <span class="num">{{ last_update.strftime('%d %b %Y') }}</span>{% endif %}
+        </p>
+    </div>
+    <div class="actions">
+        <a href="/export" class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            Export CSV
         </a>
-    </form>
-
-    <!-- >>> ЕДИНСТВЕНО ДОДАДЕНО КОПЧЕ <<< -->
-    <form method="post" action="/run-fetch" style="margin-top:10px;">
-        <button type="submit" class="pipeline-btn">
-            Fetch Data
-        </button>
-    </form>
-</div>
-
-<div class="card-container">
-    <div class="card">
-        <h3>Total Market Cap</h3>
-        <p>${{ total_market_cap }}</p>
-    </div>
-
-    <div class="card">
-        <h3>Top Gainer</h3>
-        <p>{{ top_gainer.symbol }} ({{ top_gainer.change }}%)</p>
-    </div>
-
-    <div class="card">
-        <h3>Top Loser</h3>
-        <p>{{ top_loser.symbol }} ({{ top_loser.change }}%)</p>
+        <form method="post" action="/run-fetch" style="margin:0">
+            <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.form.submit();">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>
+                Fetch latest data
+            </button>
+        </form>
     </div>
 </div>
 
-<table>
-    <thead>
-        <tr>
-            <th>Symbol</th>
-            <th>Name</th>
-            <th>Price</th>
-            <th>24h Change</th>
-            <th>Volume</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for c in coins %}
-        <tr>
-            <td><a href="/coin?symbol={{ c.symbol }}">{{ c.symbol }}</a></td>
-            <td>{{ c.symbol }}</td>
-            <td>${{ "%.2f"|format(c.close) }}</td>
-            <td class="green">N/A</td>
-            <td>{{ "%.2f"|format(c.volume) }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+{% if coins %}
+<section class="grid grid-4">
+    <div class="card card-pad stat accent">
+        <div class="label">Total market cap</div>
+        <div class="value num">{{ total_market_cap|compact }}</div>
+        <div class="sub">across {{ coins|length }} assets</div>
+    </div>
+    <div class="card card-pad stat">
+        <div class="label">24h volume</div>
+        <div class="value num">{{ total_volume|compact }}</div>
+        <div class="sub">combined trading volume</div>
+    </div>
+    <div class="card card-pad stat">
+        <div class="label">Top gainer · 24h</div>
+        {% if top_gainer %}
+        <a href="/coin?symbol={{ top_gainer.symbol }}" class="coin" style="margin-top:10px">
+            <span class="coin-icon" style="--h: {{ coin_hue(top_gainer.symbol) }}">{{ top_gainer.symbol[:4] }}</span>
+            <span>
+                <div class="coin-name">{{ top_gainer.name }}</div>
+                <span class="chip {{ 'up' if top_gainer.change_24h >= 0 else 'down' }}">{{ top_gainer.change_24h|pct }}</span>
+            </span>
+        </a>
+        {% else %}<div class="value">—</div>{% endif %}
+    </div>
+    <div class="card card-pad stat">
+        <div class="label">Top loser · 24h</div>
+        {% if top_loser %}
+        <a href="/coin?symbol={{ top_loser.symbol }}" class="coin" style="margin-top:10px">
+            <span class="coin-icon" style="--h: {{ coin_hue(top_loser.symbol) }}">{{ top_loser.symbol[:4] }}</span>
+            <span>
+                <div class="coin-name">{{ top_loser.name }}</div>
+                <span class="chip {{ 'up' if top_loser.change_24h >= 0 else 'down' }}">{{ top_loser.change_24h|pct }}</span>
+            </span>
+        </a>
+        {% else %}<div class="value">—</div>{% endif %}
+    </div>
+</section>
 
-</body>
-</html>
+<section class="card mt-lg">
+    <div class="card-head">
+        <h2>Prices by market cap</h2>
+        <input class="search" type="search" placeholder="Search coin…" data-filter="#coins tbody tr" aria-label="Search coin">
+    </div>
+    <div class="card-body" style="padding: 8px 6px 6px">
+        <div class="table-wrap">
+            <table class="t" id="coins">
+                <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Coin</th>
+                    <th class="r">Price</th>
+                    <th class="r">24h</th>
+                    <th class="r hide-sm">7d</th>
+                    <th class="r hide-sm">Volume (24h)</th>
+                    <th class="r hide-sm">Market cap</th>
+                    <th class="r hide-sm">Last 30 days</th>
+                </tr>
+                </thead>
+                <tbody>
+                {% for c in coins %}
+                <tr class="link" data-href="/coin?symbol={{ c.symbol }}" data-search="{{ (c.symbol ~ ' ' ~ c.name)|lower }}">
+                    <td class="rank">{{ loop.index }}</td>
+                    <td>
+                        <a class="coin" href="/coin?symbol={{ c.symbol }}">
+                            <span class="coin-icon" style="--h: {{ coin_hue(c.symbol) }}">{{ c.symbol[:4] }}</span>
+                            <span><div class="coin-name">{{ c.name }}</div><div class="coin-sym">{{ c.symbol }}</div></span>
+                        </a>
+                    </td>
+                    <td class="r num" style="font-weight:600">{{ c.price|price }}</td>
+                    <td class="r">
+                        {% if c.change_24h is not none %}<span class="chip {{ 'up' if c.change_24h >= 0 else 'down' }}">{{ c.change_24h|pct }}</span>{% else %}<span class="chip flat">—</span>{% endif %}
+                    </td>
+                    <td class="r hide-sm">
+                        {% if c.change_7d is not none %}<span class="num {{ 'up' if c.change_7d >= 0 else 'down' }}">{{ c.change_7d|pct }}</span>{% else %}<span class="muted">—</span>{% endif %}
+                    </td>
+                    <td class="r num text-2 hide-sm">{{ c.volume|compact }}</td>
+                    <td class="r num hide-sm">{{ c.market_cap|compact }}</td>
+                    <td class="r hide-sm"><canvas class="spark" width="120" height="36" data-spark='{{ c.spark|tojson }}'></canvas></td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+{% else %}
+<section class="card">
+    <div class="empty">
+        <div class="empty-icon">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
+        </div>
+        <h3>No market data yet</h3>
+        <p>The database is empty. Fetch one year of daily prices for 22 coins from CoinGecko — it takes a few minutes.</p>
+        <form method="post" action="/run-fetch" style="margin:0">
+            <button class="btn btn-primary" type="submit">Fetch data now</button>
+        </form>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.querySelectorAll('canvas[data-spark]').forEach(el => sparkline(el, JSON.parse(el.dataset.spark)));
+    {% if fetching %}watchFetch();{% endif %}
+</script>
+{% endblock %}

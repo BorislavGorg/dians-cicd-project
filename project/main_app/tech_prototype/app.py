@@ -29,6 +29,64 @@ TECHNICAL_ANALYSIS_SERVICE_URL = os.environ.get(
     "TECHNICAL_ANALYSIS_MICROSERVICE_URL", "http://technical_analysis_service:5002"
 )
 
+COIN_NAMES = {
+    "BTC": "Bitcoin", "ETH": "Ethereum", "BNB": "BNB", "SOL": "Solana",
+    "XRP": "XRP", "ADA": "Cardano", "DOGE": "Dogecoin", "TRX": "TRON",
+    "DOT": "Polkadot", "AVAX": "Avalanche", "LINK": "Chainlink", "LTC": "Litecoin",
+    "BCH": "Bitcoin Cash", "XLM": "Stellar", "ATOM": "Cosmos", "UNI": "Uniswap",
+    "NEAR": "NEAR Protocol", "SHIB": "Shiba Inu", "ETC": "Ethereum Classic",
+    "QTUM": "Qtum", "ICX": "ICON", "TUSD": "TrueUSD",
+}
+
+
+def coin_name(symbol):
+    return COIN_NAMES.get(symbol, symbol)
+
+
+def pct_change(new, old):
+    if new is None or old in (None, 0):
+        return None
+    return (new - old) / old * 100.0
+
+
+@app.template_filter("price")
+def fmt_price(v):
+    if v is None:
+        return "—"
+    v = float(v)
+    if v >= 1:
+        return f"${v:,.2f}"
+    if v >= 0.01:
+        return f"${v:,.4f}"
+    return f"${v:.8f}".rstrip("0")
+
+
+@app.template_filter("compact")
+def fmt_compact(v, prefix="$"):
+    if v is None:
+        return "—"
+    v = float(v)
+    for unit, div in (("T", 1e12), ("B", 1e9), ("M", 1e6), ("K", 1e3)):
+        if abs(v) >= div:
+            return f"{prefix}{v / div:,.2f}{unit}"
+    return f"{prefix}{v:,.2f}"
+
+
+@app.template_filter("pct")
+def fmt_pct(v):
+    if v is None:
+        return "—"
+    return f"{'+' if v >= 0 else ''}{v:.2f}%"
+
+
+def coin_hue(symbol):
+    return sum(ord(ch) * 37 for ch in symbol or "") % 360
+
+
+@app.context_processor
+def inject_helpers():
+    return {"coin_name": coin_name, "coin_hue": coin_hue}
+
 
 # -------------------------------------------------
 # PIPELINE TRIGGER (MICROSERVICE CALL)
@@ -43,7 +101,17 @@ def run_fetch():
     except Exception as e:
         print("Pipeline service not available:", e)
 
-    return redirect(url_for("index"))
+    return redirect(url_for("index", fetching=1))
+
+
+@app.route("/fetch-status")
+def fetch_status():
+    try:
+        r = requests.get(f"{PIPELINE_SERVICE_URL}/pipeline-status", timeout=5)
+        return r.json()
+    except Exception:
+        return {"status": "unavailable"}
+
 
 @app.route("/")
 def index():
@@ -81,47 +149,47 @@ def index():
     ]
 
     total_market_cap = sum((c.market_cap or 0) for c in coins)
+    total_volume = sum((c.volume or 0) for c in coins)
 
-    top_gainer = type("X", (), {"symbol": None, "change": None})
-    top_loser = type("X", (), {"symbol": None, "change": None})
+    # 24h промена и мини-график (последни 30 дена) за секоја валута
+    rows_view = []
+    for c in coins:
+        last30 = (
+            Crypto.query
+            .filter_by(symbol=c.symbol)
+            .order_by(Crypto.date.desc())
+            .limit(30)
+            .all()
+        )
+        closes = [r.close for r in reversed(last30) if r.close is not None]
+        change_24h = pct_change(last30[0].close, last30[1].close) if len(last30) > 1 else None
+        change_7d = pct_change(last30[0].close, last30[7].close) if len(last30) > 7 else None
+        rows_view.append({
+            "symbol": c.symbol,
+            "name": coin_name(c.symbol),
+            "price": c.close,
+            "change_24h": change_24h,
+            "change_7d": change_7d,
+            "volume": c.volume,
+            "market_cap": c.market_cap,
+            "spark": closes,
+        })
 
-    if coins:
-        sample_symbols = [c.symbol for c in coins[:80]]
-        changes = []
-
-        for sym in sample_symbols:
-            last2 = (
-                Crypto.query
-                .filter_by(symbol=sym)
-                .order_by(Crypto.date.desc())
-                .limit(2)
-                .all()
-            )
-            if len(last2) == 2 and last2[1].close and last2[0].close:
-                prev = last2[1].close
-                curr = last2[0].close
-                if prev != 0:
-                    pct = (curr - prev) / prev * 100.0
-                    changes.append((sym, pct))
-
-        if changes:
-            changes.sort(key=lambda x: x[1])
-            top_loser = type(
-                "X", (),
-                {"symbol": changes[0][0], "change": round(changes[0][1], 2)}
-            )
-            top_gainer = type(
-                "X", (),
-                {"symbol": changes[-1][0], "change": round(changes[-1][1], 2)}
-            )
+    with_change = [r for r in rows_view if r["change_24h"] is not None]
+    top_gainer = max(with_change, key=lambda r: r["change_24h"]) if with_change else None
+    top_loser = min(with_change, key=lambda r: r["change_24h"]) if with_change else None
+    last_update = max((c.date for c in coins), default=None)
 
     return render_template(
         "index.html",
-        coins=coins,
+        coins=rows_view,
         symbols=symbols,
         total_market_cap=total_market_cap,
+        total_volume=total_volume,
         top_gainer=top_gainer,
-        top_loser=top_loser
+        top_loser=top_loser,
+        last_update=last_update,
+        fetching=request.args.get("fetching") == "1",
     )
 
 
@@ -152,14 +220,14 @@ def coin_detail():
 
     latest = rows_30[0]
 
-    market_cap = sum((r.market_cap or 0) for r in rows_30) / len(rows_30)
+    market_cap = latest.market_cap
     volume_24h = latest.volume or 0
     circulating_supply = None
 
     stats_rows = []
     prev_close = None
 
-    for r in reversed(rows_30):
+    for r in reversed(rows_30):  # noqa
         change_pct = None
         if prev_close not in (None, 0) and r.close is not None:
             change_pct = (r.close - prev_close) / prev_close * 100.0
@@ -184,8 +252,14 @@ def coin_detail():
     return render_template(
         "coinDetails.html",
         symbol=symbol,
-        full_name=f"{symbol} Name",
+        full_name=coin_name(symbol),
         latest_close=latest.close,
+        change_24h=pct_change(rows_30[0].close, rows_30[1].close) if len(rows_30) > 1 else None,
+        change_7d=pct_change(rows_30[0].close, rows_30[7].close) if len(rows_30) > 7 else None,
+        change_30d=pct_change(rows_30[0].close, rows_30[-1].close) if len(rows_30) > 1 else None,
+        high_365=max((r.high for r in rows_365 if r.high is not None), default=None),
+        low_365=min((r.low for r in rows_365 if r.low is not None), default=None),
+        last_date=latest.date.strftime("%Y-%m-%d"),
         rows=rows_30,
         market_cap=market_cap,
         volume_24h=volume_24h,
@@ -280,7 +354,11 @@ def analysis_page():
     return render_template(
         "analysis.html",
         symbol=symbol,
+        full_name=coin_name(symbol),
         signals=signals,
+        latest_close=float(daily_df["close"].iloc[-1]),
+        chart_labels=[d.strftime("%Y-%m-%d") for d in daily_df.tail(120).index],
+        chart_close=[float(v) for v in daily_df["close"].tail(120)],
         table=daily_df.tail(50).to_html(classes="table table-striped")
     )
 
@@ -330,14 +408,14 @@ def compare():
     rows_a = (
         Crypto.query.filter_by(symbol=a)
         .order_by(Crypto.date.desc())
-        .limit(30)
+        .limit(90)
         .all()
         if a else []
     )
     rows_b = (
         Crypto.query.filter_by(symbol=b)
         .order_by(Crypto.date.desc())
-        .limit(30)
+        .limit(90)
         .all()
         if b else []
     )
@@ -353,7 +431,7 @@ def compare():
 
     return render_template(
         "compare.html",
-        symbols=symbols,
+        symbols=sorted(symbols),
         a=a,
         b=b,
         rows_a=rows_a,
@@ -403,10 +481,14 @@ def lstm_train_route():
     return render_template(
         "lstm.html",
         symbol=symbol,
+        full_name=coin_name(symbol),
         rmse=result["rmse"],
         mape=result["mape"],
         r2=result["r2"],
-        plot_data=result["plot_base64"]
+        plot_data=result["plot_base64"],
+        y_true=result["y_true"],
+        y_pred=result["y_pred"],
+        test_dates=result["test_dates"],
     )
 
 
@@ -443,7 +525,11 @@ def lstm_forecast():
     return render_template(
         "lstm_forecast.html",
         symbol=symbol,
-        forecast_rows=forecast_rows
+        full_name=coin_name(symbol),
+        forecast_rows=forecast_rows,
+        last_close=float(df["close"].iloc[-1]),
+        history_labels=[d.strftime("%Y-%m-%d") for d in df.tail(30).index],
+        history_close=[float(v) for v in df["close"].tail(30)],
     )
 
 

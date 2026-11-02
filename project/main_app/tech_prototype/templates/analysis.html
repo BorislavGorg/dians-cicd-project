@@ -1,61 +1,79 @@
 {% extends "base.html" %}
+{% block title %}Technical analysis · {{ symbol }}{% endblock %}
+
 
 {% block content %}
-<section class="container py-4">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
+{% set sigs = [signals.daily.signal, signals.weekly.signal, signals.monthly.signal] %}
+{% set buys = sigs|select('equalto', 'BUY')|list|length %}
+{% set sells = sigs|select('equalto', 'SELL')|list|length %}
+{% set overall = 'BUY' if buys > sells and buys >= 2 else ('SELL' if sells > buys and sells >= 2 else 'HOLD') %}
+<div class="crumbs"><a href="/">Markets</a> <span>/</span> <a href="/coin?symbol={{ symbol }}">{{ full_name }}</a> <span>/</span> <span>Technical analysis</span></div>
 
-            <header class="mb-4 text-center">
-                <h2>Market Signals for {{ symbol }}</h2>
-                <p class="text-muted">Technical analysis overview</p>
-            </header>
-
-            <div class="card shadow-sm">
-                <div class="card-body">
-
-                    <h5 class="card-title mb-3">Timeframe Signals</h5>
-
-                    <div class="list-group">
-
-                        <!-- DAILY -->
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Daily</span>
-                            <span class="fw-bold">
-                                {{ signals.daily.signal }}
-                                <span class="badge bg-secondary ms-2">
-                                    {{ signals.daily.score }}
-                                </span>
-                            </span>
-                        </div>
-
-                        <!-- WEEKLY -->
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Weekly</span>
-                            <span class="fw-bold">
-                                {{ signals.weekly.signal }}
-                                <span class="badge bg-secondary ms-2">
-                                    {{ signals.weekly.score }}
-                                </span>
-                            </span>
-                        </div>
-
-                        <!-- MONTHLY -->
-                        <div class="list-group-item d-flex justify-content-between align-items-center">
-                            <span>Monthly</span>
-                            <span class="fw-bold">
-                                {{ signals.monthly.signal }}
-                                <span class="badge bg-secondary ms-2">
-                                    {{ signals.monthly.score }}
-                                </span>
-                            </span>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-
+<div class="page-head">
+    <div class="coin">
+        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        <div>
+            <h1>Technical analysis</h1>
+            <p>{{ full_name }} · SMA crossover, RSI and MACD on three timeframes</p>
         </div>
     </div>
+    <div class="actions">
+        <a href="/coin?symbol={{ symbol }}" class="btn btn-ghost">← Back to {{ symbol }}</a>
+        <a href="/lstm_forecast?symbol={{ symbol }}&days=7" class="btn btn-primary">7-day forecast</a>
+    </div>
+</div>
+
+<section class="grid grid-main">
+    <div class="card">
+        <div class="card-head">
+            <h2>Price · last 120 days</h2>
+            <span class="num" style="font-weight:600">{{ latest_close|price }}</span>
+        </div>
+        <div class="card-body"><div class="chart-box"><canvas id="priceChart"></canvas></div></div>
+    </div>
+
+    <div class="card card-pad" style="display:flex; flex-direction:column; justify-content:center; text-align:center">
+        <div class="stat"><div class="label">Overall signal</div></div>
+        <div style="margin:18px 0 10px"><span class="signal {{ overall }}" style="font-size:18px; padding:10px 22px">{{ overall }}</span></div>
+        <p class="text-2" style="margin:0; font-size:13.5px">
+            {{ buys }} of 3 timeframes say <b class="up">BUY</b>, {{ sells }} say <b class="down">SELL</b>.
+        </p>
+        <p class="muted" style="margin:14px 0 0; font-size:12px">Score from −1 (strong sell) to +1 (strong buy). BUY ≥ 0.2, SELL ≤ −0.2.</p>
+    </div>
 </section>
+
+<section class="grid grid-3 mt">
+    {% for key, label in [('daily', 'Daily'), ('weekly', 'Weekly'), ('monthly', 'Monthly')] %}
+    {% set s = signals[key] %}
+    {% set pos = ((s.score|float + 1) / 2 * 100) %}
+    <div class="card card-pad">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+            <div class="stat"><div class="label">{{ label }}</div></div>
+            <span class="signal {{ s.signal }}">{{ s.signal }}</span>
+        </div>
+        <div class="num" style="font-size:30px; font-weight:700; margin-top:14px; letter-spacing:-0.03em">
+            {{ '%+.2f'|format(s.score|float) }}
+        </div>
+        <div class="gauge">
+            <div class="gauge-track"><span class="gauge-needle" style="left: {{ [[pos, 0]|max, 100]|min }}%"></span></div>
+            <div class="gauge-scale"><span>−1</span><span>0</span><span>+1</span></div>
+        </div>
+    </div>
+    {% endfor %}
+</section>
+
+<section class="card card-pad mt">
+    <h3 style="margin:0 0 12px; font-size:15px">How the signal is computed</h3>
+    <div class="grid grid-3">
+        <div><b>SMA crossover</b><p class="text-2" style="margin:4px 0 0; font-size:13.5px">Short vs long moving average — shows the trend direction.</p></div>
+        <div><b>RSI</b><p class="text-2" style="margin:4px 0 0; font-size:13.5px">Above 70 is overbought (sell), below 30 oversold (buy).</p></div>
+        <div><b>MACD</b><p class="text-2" style="margin:4px 0 0; font-size:13.5px">Crossing of the MACD and signal line confirms momentum.</p></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    priceChart(document.getElementById('priceChart'), {{ chart_labels|tojson }}, {{ chart_close|tojson }});
+</script>
 {% endblock %}

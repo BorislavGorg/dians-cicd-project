@@ -1,59 +1,75 @@
 {% extends "base.html" %}
+{% block title %}LSTM model · {{ symbol }}{% endblock %}
 
 {% block content %}
-<div class="container my-5">
+<div class="crumbs"><a href="/">Markets</a> <span>/</span> <a href="/coin?symbol={{ symbol }}">{{ full_name }}</a> <span>/</span> <span>LSTM model</span></div>
 
-    <div class="text-center mb-5">
-        <h2 class="fw-bold">LSTM Model Performance</h2>
-        <p class="text-muted">Training summary for <strong>{{ symbol }}</strong></p>
-    </div>
-
-    <div class="row text-center mb-4">
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="text-muted">RMSE</h6>
-                    <h4 class="fw-bold">{{ rmse }}</h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="text-muted">MAPE (%)</h6>
-                    <h4 class="fw-bold">{{ mape }}</h4>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-4">
-            <div class="card shadow-sm border-0">
-                <div class="card-body">
-                    <h6 class="text-muted">R² Score</h6>
-                    <h4 class="fw-bold">{{ r2 }}</h4>
-                </div>
-            </div>
+<div class="page-head">
+    <div class="coin">
+        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        <div>
+            <h1>LSTM model trained</h1>
+            <p>{{ full_name }} · evaluated on the last 30% of the price history (test set)</p>
         </div>
     </div>
-
-
-    <div class="card shadow-lg border-0 mb-4">
-        <div class="card-body text-center">
-            <h5 class="mb-3">Actual vs Predicted Price</h5>
-
-            <img src="{{ plot_data }}"
-                 class="img-fluid rounded"
-                 alt="LSTM Prediction Plot">
-        </div>
-    </div>
-
-    <div class="text-center">
-        <a href="/lstm_forecast?symbol={{ symbol }}&days=7"
-           class="btn btn-primary btn-lg px-5">
-            Predict 7-Day Forecast
+    <div class="actions">
+        <a href="/coin?symbol={{ symbol }}" class="btn btn-ghost">← Back to {{ symbol }}</a>
+        <a href="/lstm_forecast?symbol={{ symbol }}&days=7" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+            Predict next 7 days
         </a>
     </div>
-
 </div>
+
+<section class="grid grid-3">
+    <div class="card card-pad stat">
+        <div class="label">RMSE</div>
+        <div class="value num">{{ rmse|price }}</div>
+        <div class="sub">average error in price</div>
+    </div>
+    <div class="card card-pad stat">
+        <div class="label">MAPE</div>
+        <div class="value num">{{ '%.2f'|format(mape) }}%</div>
+        <div class="sub">average error in percent</div>
+    </div>
+    <div class="card card-pad stat {{ 'accent' if r2 >= 0.7 }}">
+        <div class="label">R² score</div>
+        <div class="value num {{ 'up' if r2 >= 0.7 else ('down' if r2 < 0.3 else '') }}">{{ '%.3f'|format(r2) }}</div>
+        <div class="sub">1.0 = perfect fit</div>
+    </div>
+</section>
+
+<section class="card mt">
+    <div class="card-head">
+        <h2>Actual vs predicted price</h2>
+        <span class="hint">test set · {{ y_true|length }} days</span>
+    </div>
+    <div class="card-body"><div class="chart-box lg"><canvas id="fitChart"></canvas></div></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    new Chart(document.getElementById('fitChart'), {
+        type: 'line',
+        data: {
+            labels: {{ test_dates|tojson }},
+            datasets: [
+                { label: 'Actual', data: {{ y_true|tojson }}, borderColor: DC.text2, borderWidth: 2, pointRadius: 0, tension: 0.2,
+                  fill: true, backgroundColor: c => dcGradient(c, '#a3adc2', 0.12) },
+                { label: 'Predicted (LSTM)', data: {{ y_pred|tojson }}, borderColor: DC.accent, borderWidth: 2, borderDash: [6, 4], pointRadius: 0, tension: 0.2 }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { position: 'top', align: 'start', labels: { color: DC.text2 } },
+                       tooltip: { displayColors: true, callbacks: { label: c => ` ${c.dataset.label}  ${fmtPrice(c.parsed.y)}` } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
+                y: { position: 'right', grid: { color: DC.grid }, border: { display: false }, ticks: { callback: v => fmtPrice(v) } }
+            }
+        }
+    });
+</script>
 {% endblock %}

@@ -1,51 +1,101 @@
 {% extends "base.html" %}
+{% block title %}7-day forecast · {{ symbol }}{% endblock %}
 
 {% block content %}
-<section class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-7 col-md-9">
+{% set final = forecast_rows[-1][1] if forecast_rows else none %}
+{% set chg = ((final - last_close) / last_close * 100) if final is not none and last_close else none %}
+<div class="crumbs"><a href="/">Markets</a> <span>/</span> <a href="/coin?symbol={{ symbol }}">{{ full_name }}</a> <span>/</span> <span>Forecast</span></div>
 
-            <div class="text-center mb-4">
-                <h2 class="fw-bold"> Price Forecast</h2>
-                <p class="text-muted mb-0">
-                    LSTM 7-day projection for <strong>{{ symbol }}</strong>
-                </p>
-            </div>
+<div class="page-head">
+    <div class="coin">
+        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        <div>
+            <h1>7-day price forecast</h1>
+            <p>{{ full_name }} · LSTM neural network, 30-day lookback window</p>
+        </div>
+    </div>
+    <div class="actions">
+        <a href="/coin?symbol={{ symbol }}" class="btn btn-ghost">← Back to {{ symbol }}</a>
+        <a href="/lstm_train?symbol={{ symbol }}" class="btn">Retrain model</a>
+    </div>
+</div>
 
-            <div class="card shadow-lg border-0">
-                <div class="card-header bg-dark text-white text-center">
-                    <strong>Forecasted Closing Prices</strong>
-                </div>
+<section class="grid grid-3">
+    <div class="card card-pad stat">
+        <div class="label">Last close</div>
+        <div class="value num">{{ last_close|price }}</div>
+        <div class="sub">{{ history_labels[-1] if history_labels else '' }}</div>
+    </div>
+    <div class="card card-pad stat accent">
+        <div class="label">Forecast in 7 days</div>
+        <div class="value num">{{ final|price }}</div>
+        <div class="sub">{{ forecast_rows[-1][0] if forecast_rows else '' }}</div>
+    </div>
+    <div class="card card-pad stat">
+        <div class="label">Expected change</div>
+        <div class="value num {{ 'up' if chg and chg >= 0 else 'down' }}">{{ chg|pct }}</div>
+        <div class="sub">model estimate · not financial advice</div>
+    </div>
+</section>
 
-                <div class="card-body p-0">
-                    <table class="table table-hover mb-0 align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Date</th>
-                                <th class="text-end">Forecasted Close</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for day, value in forecast_rows %}
-                                <tr>
-                                    <td>{{ day }}</td>
-                                    <td class="text-end fw-semibold">
-                                        {{ "%.6f"|format(value) }}
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div class="text-center mt-4">
-                <a href="/coin?symbol={{ symbol }}" class="btn btn-outline-primary px-4">
-                    ← Back to Coin
-                </a>
-            </div>
-
+<section class="grid grid-main mt">
+    <div class="card">
+        <div class="card-head">
+            <h2>Last 30 days and forecast</h2>
+            <span class="hint">dashed = predicted</span>
+        </div>
+        <div class="card-body"><div class="chart-box"><canvas id="fcChart"></canvas></div></div>
+    </div>
+    <div class="card">
+        <div class="card-head"><h2>Forecasted close</h2></div>
+        <div class="card-body" style="padding: 8px 6px 6px">
+            <table class="t compact">
+                <thead><tr><th>Date</th><th class="r">Price</th><th class="r">vs today</th></tr></thead>
+                <tbody>
+                {% for day, value in forecast_rows %}
+                {% set d = ((value - last_close) / last_close * 100) if last_close else none %}
+                <tr>
+                    <td class="num text-2">{{ day }}</td>
+                    <td class="r num" style="font-weight:600">{{ value|price }}</td>
+                    <td class="r">{% if d is not none %}<span class="chip {{ 'up' if d >= 0 else 'down' }}">{{ d|pct }}</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const hl = {{ history_labels|tojson }}, hc = {{ history_close|tojson }};
+    const fr = {{ forecast_rows|tojson }};
+    const labels = hl.concat(fr.map(r => r[0]));
+    const hist = hc.concat(fr.map(() => null));
+    const fc = hc.map((v, i) => i === hc.length - 1 ? v : null).concat(fr.map(r => r[1]));
+
+    new Chart(document.getElementById('fcChart'), {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [
+                { label: 'History', data: hist, borderColor: DC.accent, borderWidth: 2, pointRadius: 0, tension: 0.25,
+                  fill: true, backgroundColor: c => dcGradient(c, '#6c8cff', 0.22) },
+                { label: 'Forecast', data: fc, borderColor: DC.amber, borderWidth: 2, borderDash: [6, 4], tension: 0.25,
+                  pointRadius: (c) => c.dataIndex >= hc.length ? 3 : 0, pointBackgroundColor: DC.amber, spanGaps: false }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: false },
+                       tooltip: { callbacks: { label: c => c.parsed.y === null ? null : ` ${c.dataset.label}  ${fmtPrice(c.parsed.y)}` } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0 } },
+                y: { position: 'right', grid: { color: DC.grid }, border: { display: false }, ticks: { callback: v => fmtPrice(v) } }
+            }
+        }
+    });
+</script>
 {% endblock %}

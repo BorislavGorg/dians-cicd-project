@@ -1,358 +1,153 @@
-<!DOCTYPE html>
-<html lang="mk">
-<head>
-  <meta charset="utf-8"/>
-  <title>Coin Details - {{ symbol }}</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+{% extends "base.html" %}
+{% block title %}{{ full_name }} ({{ symbol }}){% endblock %}
 
-  <style>
-    body {
-        font-family: Arial, Helvetica, sans-serif;
-        margin:0;
-        background:#f3f5fa;
-        color:#222;
-    }
+{% block content %}
+<div class="crumbs"><a href="/">Markets</a> <span>/</span> <span>{{ full_name }}</span></div>
 
-    .navbar {
-        background:#ffffff;
-        border-bottom:1px solid #ccc;
-        padding:15px 30px;
-        display:flex;
-        align-items:center;
-        gap:25px;
-    }
-
-    .logo {
-        font-size:22px;
-        font-weight:bold;
-        margin-right:40px;
-    }
-
-    .navbar a {
-        text-decoration:none;
-        color:#333;
-        font-size:16px;
-        font-weight:500;
-    }
-
-    .container {
-        max-width:1000px;
-        margin:24px auto;
-        padding:0 16px;
-    }
-
-    .header-row {
-        display:flex;
-        justify-content:space-between;
-        align-items:flex-start;
-        gap:12px;
-        margin-bottom:18px;
-        flex-wrap:wrap;
-    }
-
-    .title {
-        font-size:26px;
-        font-weight:700;
-    }
-
-    .price {
-        font-size:20px;
-        color:#0b6ef6;
-        font-weight:700;
-        margin-top:4px;
-    }
-
-    .actions{
-       display: flex;
-        flex-wrap: wrap;
-        gap: 12px;
-        margin: 20px 0;
-    }
-
-    .btn {
-        padding: 10px 18px;
-        border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
-        text-decoration: none;
-        display: inline-block;
-        transition: all 0.2s ease-in-out;
-        border: 2px solid transparent;
-    }
-
-    .btn-blue {
-        background-color: #1d4ed8;
-        border-color: #1d4ed8;
-        color: white;
-    }
-    .btn-blue:hover {
-        background-color: #153fa6;
-        border-color: #153fa6;
-    }
-
-    .btn-green {
-        background-color: #059669;
-        border-color: #059669;
-        color: white;
-    }
-    .btn-green:hover {
-        background-color: #047857;
-        border-color: #047857;
-    }
-
-    .btn-purple {
-        background-color: #7c3aed;
-        border-color: #7c3aed;
-        color: white;
-    }
-    .btn-purple:hover {
-        background-color: #5b21b6;
-        border-color: #5b21b6;
-    }
-
-    .btn-gray {
-        background-color: #4b5563;
-        border-color: #4b5563;
-        color: white;
-    }
-    .btn-gray:hover {
-        background-color: #374151;
-        border-color: #374151;
-    }
-
-    .panel {
-        background:#fff;
-        padding:14px;
-        border-radius:10px;
-        box-shadow:0 1px 6px rgba(0,0,0,0.04);
-    }
-
-    .top-grid {
-        display:grid;
-        grid-template-columns:1fr 320px;
-        gap:18px;
-        margin-bottom:18px;
-    }
-
-    .chart {
-        height:260px;
-        border-radius:8px;
-        background:linear-gradient(180deg,#f8fbff,#eef6ff);
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        color:#777;
-        font-weight:600;
-    }
-
-    .metrics {
-        display:flex;
-        flex-direction:column;
-        gap:10px;
-    }
-
-    .metric {
-        background:#fff;
-        padding:10px;
-        border-radius:8px;
-        border:1px solid #f0f2f7;
-    }
-
-    .metric .label {
-        color:#666;
-        font-size:13px;
-    }
-
-    .metric .value {
-        font-size:16px;
-        font-weight:700;
-        margin-top:6px;
-    }
-
-    h3 {
-        margin:0 0 8px 0;
-        font-size:18px;
-    }
-
-    table {
-        width:100%;
-        border-collapse:collapse;
-        margin-top:12px;
-    }
-
-    th, td {
-        padding:10px 12px;
-        border-bottom:1px solid #f1f3f6;
-        font-size:14px;
-        text-align:left;
-    }
-
-    @media (max-width:840px) {
-        .top-grid {
-            grid-template-columns:1fr;
-        }
-    }
-  </style>
-</head>
-
-<body>
-
-<div class="navbar">
-    <div class="logo">APP Logo</div>
-    <a href="/">Dashboard</a>
-    <a href="/compare">Compare</a>
-    <a href="/favorites">Favourites</a>
-    <a href="/help">Help</a>
+<div class="page-head">
+    <div class="coin">
+        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        <div>
+            <h1 style="display:flex; align-items:center; gap:10px">{{ full_name }} <span class="coin-sym" style="font-size:15px">{{ symbol }}</span></h1>
+            <div style="display:flex; align-items:center; gap:12px; margin-top:6px">
+                <span class="num" style="font-size:26px; font-weight:700; letter-spacing:-0.03em">{{ latest_close|price }}</span>
+                {% if change_24h is not none %}<span class="chip {{ 'up' if change_24h >= 0 else 'down' }}">{{ change_24h|pct }} · 24h</span>{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <a href="/analysis?symbol={{ symbol }}" class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/></svg>
+            Technical analysis
+        </a>
+        <a href="/lstm_train?symbol={{ symbol }}" class="btn" onclick="this.querySelector('span').textContent='Training…'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>
+            <span>Train LSTM</span>
+        </a>
+        <a href="/lstm_forecast?symbol={{ symbol }}&days=7" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 17l6-6 4 4 8-8"/><path d="M14 7h7v7"/></svg>
+            7-day forecast
+        </a>
+        <a href="/export?symbol={{ symbol }}" class="btn btn-ghost" title="Export CSV">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+            CSV
+        </a>
+    </div>
 </div>
 
-<div class="container">
-
-    <div class="header-row">
-        <div>
-            <div class="title">{{ full_name }} ({{ symbol }})</div>
-            <div class="price">
-                Latest:
-                {% if latest_close is not none %}
-                    ${{ "%.2f"|format(latest_close) }}
-                {% else %}
-                    N/A
-                {% endif %}
-            </div>
-
-
-            <div class="actions">
-                <a href="/analysis?symbol={{ symbol }}" class="btn btn-blue">Technical Analysis</a>
-                <a href="/lstm_train?symbol={{ symbol }}" class="btn btn-green">Train LSTM</a>
-                <a href="/lstm_forecast?symbol={{ symbol }}&days=7" class="btn btn-purple">LSTM Forecast</a>
-                <a href="/export?symbol={{ symbol }}" class="btn btn-gray">Export CSV</a>
+<section class="grid grid-main">
+    <div class="card">
+        <div class="card-head">
+            <h2>Price</h2>
+            <div class="seg" id="range">
+                <button data-days="7">7D</button>
+                <button data-days="30">30D</button>
+                <button data-days="90" class="on">90D</button>
+                <button data-days="365">1Y</button>
             </div>
         </div>
-
-        <a class="btn secondary" href="/">Back</a>
-    </div>
-
-    <div class="top-grid">
-        <div class="panel">
-            <h3>Price history (last 365 days)</h3>
-            <canvas id="priceChart" height="120"></canvas>
-            <h3 style="margin-top:14px;">Volume (last 365 days)</h3>
-            <canvas id="volumeChart" height="120"></canvas>
-        </div>
-
-        <div class="metrics">
-            <div class="metric">
-                <div class="label">Market Cap</div>
-                <div class="value">
-                    {% if market_cap is not none %}
-                        ${{ "%.2f"|format(market_cap) }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="metric">
-                <div class="label">24h Volume</div>
-                <div class="value">
-                    {% if volume_24h is not none %}
-                        ${{ "%.2f"|format(volume_24h) }}
-                    {% else %}
-                        N/A
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="metric">
-                <div class="label">Circulating Supply</div>
-                <div class="value">
-                    {{ circulating_supply if circulating_supply is not none else 'N/A' }}
-                </div>
-            </div>
-
+        <div class="card-body">
+            <div class="chart-box"><canvas id="priceChart"></canvas></div>
+            <div class="chart-box sm" style="margin-top:12px"><canvas id="volumeChart"></canvas></div>
         </div>
     </div>
 
-    <div class="panel">
-        <h3>Daily statistics (last 30 days)</h3>
-        <table>
-            <thead>
+    <div class="card card-pad">
+        <h3 style="margin:0 0 4px; font-size:15px">Statistics</h3>
+        <div class="kv">
+            <div class="kv-row"><span class="k">Market cap</span><span class="v num">{{ market_cap|compact }}</span></div>
+            <div class="kv-row"><span class="k">Volume (24h)</span><span class="v num">{{ volume_24h|compact }}</span></div>
+            <div class="kv-row"><span class="k">Change 7d</span>
+                <span class="v num {{ 'up' if change_7d and change_7d >= 0 else 'down' }}">{{ change_7d|pct }}</span></div>
+            <div class="kv-row"><span class="k">Change 30d</span>
+                <span class="v num {{ 'up' if change_30d and change_30d >= 0 else 'down' }}">{{ change_30d|pct }}</span></div>
+            <div class="kv-row"><span class="k">Last update</span><span class="v num">{{ last_date }}</span></div>
+        </div>
+
+        {% if high_365 and low_365 and high_365 > low_365 %}
+        {% set pos = ((latest_close - low_365) / (high_365 - low_365) * 100) %}
+        <div style="margin-top:18px">
+            <div class="kv-row" style="border:0; padding-bottom:6px"><span class="k">1-year range</span></div>
+            <div class="range">
+                <div class="range-track"><span class="range-dot" style="left: {{ [[pos, 0]|max, 100]|min }}%"></span></div>
+                <div class="range-labels num"><span>{{ low_365|price }}</span><span>{{ high_365|price }}</span></div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<section class="card mt-lg">
+    <div class="card-head">
+        <h2>Daily statistics</h2>
+        <span class="hint">last 30 days</span>
+    </div>
+    <div class="card-body" style="padding: 8px 6px 6px">
+        <div class="table-wrap">
+            <table class="t compact">
+                <thead>
                 <tr>
-                    <th>Date</th>
-                    <th>Open</th>
-                    <th>High</th>
-                    <th>Low</th>
-                    <th>Close</th>
-                    <th>Volume</th>
-                    <th>Market Cap</th>
-                    <th>Change %</th>
+                    <th>Date</th><th class="r">Open</th><th class="r">High</th><th class="r">Low</th>
+                    <th class="r">Close</th><th class="r hide-sm">Volume</th><th class="r hide-sm">Market cap</th><th class="r">Change</th>
                 </tr>
-            </thead>
-            <tbody>
-            {% for r in stats_rows %}
+                </thead>
+                <tbody>
+                {% for r in stats_rows|reverse %}
                 <tr>
-                    <td>{{ r.date }}</td>
-                    <td>{{ "%.2f"|format(r.open) if r.open is not none else 'N/A' }}</td>
-                    <td>{{ "%.2f"|format(r.high) if r.high is not none else 'N/A' }}</td>
-                    <td>{{ "%.2f"|format(r.low) if r.low is not none else 'N/A' }}</td>
-                    <td>{{ "%.2f"|format(r.close) if r.close is not none else 'N/A' }}</td>
-                    <td>{{ "%.2f"|format(r.volume) if r.volume is not none else 'N/A' }}</td>
-                    <td>{{ "%.2f"|format(r.market_cap) if r.market_cap is not none else 'N/A' }}</td>
-                    <td>
-                        {% if r.change_pct is not none %}
-                            {{ "%.2f"|format(r.change_pct) }}%
-                        {% else %}
-                            N/A
-                        {% endif %}
+                    <td class="num text-2">{{ r.date }}</td>
+                    <td class="r num">{{ r.open|price }}</td>
+                    <td class="r num">{{ r.high|price }}</td>
+                    <td class="r num">{{ r.low|price }}</td>
+                    <td class="r num" style="font-weight:600">{{ r.close|price }}</td>
+                    <td class="r num text-2 hide-sm">{{ r.volume|compact }}</td>
+                    <td class="r num text-2 hide-sm">{{ r.market_cap|compact }}</td>
+                    <td class="r">
+                        {% if r.change_pct is not none %}<span class="chip {{ 'up' if r.change_pct >= 0 else 'down' }}">{{ r.change_pct|pct }}</span>{% else %}<span class="muted">—</span>{% endif %}
                     </td>
                 </tr>
-            {% endfor %}
-            </tbody>
-        </table>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+</section>
+{% endblock %}
 
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% block scripts %}
 <script>
-  const labels = {{ chart_labels|tojson }};
-  const closeData = {{ chart_close|tojson }};
-  const volData = {{ chart_volume|tojson }};
+    const allLabels = {{ chart_labels|tojson }};
+    const allClose = {{ chart_close|tojson }};
+    const allVol = {{ chart_volume|tojson }};
 
-  const priceCtx = document.getElementById('priceChart');
-  new Chart(priceCtx, {
-    type: 'line',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Close',
-        data: closeData,
-        tension: 0.15,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true } },
-      scales: { x: { display: false } }
-    }
-  });
+    const up = allClose.length > 1 && allClose[allClose.length - 1] >= allClose[0];
+    const price = priceChart(document.getElementById('priceChart'), [], [], { color: DC.accent });
 
-  const volumeCtx = document.getElementById('volumeChart');
-  new Chart(volumeCtx, {
-    type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        label: 'Volume',
-        data: volData,
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: true } },
-      scales: { x: { display: false } }
+    const vol = new Chart(document.getElementById('volumeChart'), {
+        type: 'bar',
+        data: { labels: [], datasets: [{ label: 'Volume', data: [], backgroundColor: 'rgba(108,140,255,0.35)', hoverBackgroundColor: DC.accent, borderRadius: 3, barPercentage: 0.9, categoryPercentage: 0.9 }] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => '$' + fmtCompact(c.parsed.y) } } },
+            scales: {
+                x: { grid: { display: false }, ticks: { display: false } },
+                y: { position: 'right', grid: { color: DC.grid }, border: { display: false }, ticks: { callback: v => fmtCompact(v), maxTicksLimit: 3 } }
+            }
+        }
+    });
+
+    function show(days) {
+        const n = Math.min(days, allLabels.length);
+        price.data.labels = allLabels.slice(-n);
+        price.data.datasets[0].data = allClose.slice(-n);
+        vol.data.labels = allLabels.slice(-n);
+        vol.data.datasets[0].data = allVol.slice(-n);
+        price.update(); vol.update();
     }
-  });
+    document.querySelectorAll('#range button').forEach(b => b.addEventListener('click', () => {
+        document.querySelectorAll('#range button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        show(Number(b.dataset.days));
+    }));
+    show(90);
 </script>
-
-</body>
-</html>
+{% endblock %}

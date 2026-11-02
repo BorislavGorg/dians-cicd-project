@@ -1,241 +1,144 @@
-<!DOCTYPE html>
-<html lang="mk">
-<head>
-  <meta charset="utf-8"/>
-  <title>Compare Coins</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+{% extends "base.html" %}
+{% block title %}Compare {{ a }} vs {{ b }}{% endblock %}
 
+{% macro coin_card(sym, rows, color) %}
+<div class="card card-pad">
+    {% if rows %}
+    {% set last = rows[0] %}
+    {% set first = rows[-1] %}
+    {% set chg = ((last.close - first.close) / first.close * 100) if first.close else none %}
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px">
+        <a class="coin" href="/coin?symbol={{ sym }}">
+            <span class="coin-icon" style="--h: {{ coin_hue(sym) }}">{{ sym[:4] }}</span>
+            <span><div class="coin-name">{{ coin_name(sym) }}</div><div class="coin-sym">{{ sym }}</div></span>
+        </a>
+        <span style="width:22px; height:4px; border-radius:4px; background: {{ color }}; margin-top:14px"></span>
+    </div>
+    <div class="num" style="font-size:26px; font-weight:700; margin-top:16px; letter-spacing:-0.03em">{{ last.close|price }}</div>
+    <div class="kv" style="margin-top:8px">
+        <div class="kv-row"><span class="k">Change ({{ rows|length }}d)</span>
+            <span class="v num {{ 'up' if chg and chg >= 0 else 'down' }}">{{ chg|pct }}</span></div>
+        <div class="kv-row"><span class="k">Market cap</span><span class="v num">{{ last.market_cap|compact }}</span></div>
+        <div class="kv-row"><span class="k">Volume (24h)</span><span class="v num">{{ last.volume|compact }}</span></div>
+    </div>
+    {% else %}
+    <p class="muted">No data for {{ sym }}.</p>
+    {% endif %}
+</div>
+{% endmacro %}
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-  <style>
-    body {
-        font-family: Arial, Helvetica, sans-serif;
-        margin:0; background:#f3f5fa;
-        color:#222;
-    }
-    .navbar {
-        background: #ffffff;
-        border-bottom: 1px solid #ccc;
-        padding: 15px 30px;
-        display: flex;
-        align-items: center;
-        gap: 25px;
-    }
-
-    .logo {
-        font-size: 22px;
-        font-weight: bold;
-        margin-right: 40px;
-    }
-
-    .navbar a {
-        text-decoration: none;
-        color: #333;
-        font-size: 16px;
-        font-weight: 500;
-    }
-    .container {
-        max-width:1000px;
-        margin:20px auto;
-        padding:0 16px;
-    }
-    h1 {
-        margin-top:18px;
-    }
-
-    .panel {
-        background:#fff;
-        padding:14px;
-        border-radius:10px;
-        box-shadow:0 1px 6px rgba(0,0,0,0.04);
-        margin-bottom:16px;
-    }
-
-    .form-row {
-        display:flex;
-        gap:12px;
-        align-items:center;
-        margin-bottom:12px;
-    }
-    select {
-        padding:8px 10px;
-        border-radius:6px;
-        border:1px solid #ddd;
-        font-size:14px;
-    }
-    .btn {
-        background:#1f6feb;
-        color:#fff;
-        padding:8px 12px;
-        border-radius:6px;
-        border:none;
-        cursor:pointer;
-    }
-
-    .chart-container {
-        height:300px;
-    }
-
-    .compare-table {
-        width:100%;
-        border-collapse:collapse;
-        margin-top:12px;
-    }
-    .compare-table th, .compare-table td {
-        padding:10px 12px;
-        border-bottom:1px solid #f1f3f6;
-        text-align:left;
-    }
-
-    .side-by-side {
-        display:flex;
-        gap:12px;
-        margin-top:12px;
-    }
-    .col {
-        flex:1;
-        background:#fff;
-        padding:10px;
-        border-radius:8px;
-        box-shadow:0 1px 4px rgba(0,0,0,0.03);
-    }
-
-    @media (max-width:720px) {
-      .form-row { flex-direction:column; align-items:stretch; }
-      .side-by-side { flex-direction:column; }
-    }
-  </style>
-</head>
-<body>
-
- <div class="navbar">
-  <div class="logo">APP Logo</div>
-    <a href="/">Dashboard</a>
-    <a href="/compare">Compare</a>
-    <a href="/favorites">Favourites</a>
-    <a href="/help">Help</a>
+{% block content %}
+<div class="page-head">
+    <div>
+        <h1>Compare coins</h1>
+        <p>Relative performance of two assets over the last 90 days</p>
+    </div>
+    <form method="get" action="/compare" class="actions">
+        <select class="select" name="a" aria-label="Coin A">
+            {% for s in symbols %}<option value="{{ s }}" {% if s == a %}selected{% endif %}>{{ s }} · {{ coin_name(s) }}</option>{% endfor %}
+        </select>
+        <span class="muted" style="font-weight:600">vs</span>
+        <select class="select" name="b" aria-label="Coin B">
+            {% for s in symbols %}<option value="{{ s }}" {% if s == b %}selected{% endif %}>{{ s }} · {{ coin_name(s) }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-primary" type="submit">Compare</button>
+    </form>
 </div>
 
-
-
-  <div class="container">
-    <h1>Compare Coins</h1>
-
-    <div class="panel">
-      <form method="get" action="/compare" class="form-row">
-        <label>Coin A:</label>
-        <select name="a">
-          {% for s in symbols %}
-            <option value="{{ s }}" {% if s==a %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-
-        <label>Coin B:</label>
-        <select name="b">
-          {% for s in symbols %}
-            <option value="{{ s }}" {% if s==b %}selected{% endif %}>{{ s }}</option>
-          {% endfor %}
-        </select>
-
-        <button class="btn" type="submit">Compare</button>
-      </form>
-
-      <div style="margin-top:10px; color:#555; font-size:14px;">
-        Showing latest data for <strong>{{ a }}</strong> and <strong>{{ b }}</strong>.
-      </div>
+<section class="grid grid-main">
+    <div class="card">
+        <div class="card-head">
+            <h2>Performance</h2>
+            <div class="seg" id="mode">
+                <button data-mode="pct" class="on">% change</button>
+                <button data-mode="abs">Price</button>
+            </div>
+        </div>
+        <div class="card-body"><div class="chart-box lg"><canvas id="compareChart"></canvas></div></div>
     </div>
-
-    <div class="panel">
-      <h3>Price comparison (Close)</h3>
-      <div class="chart-container">
-        <canvas id="compareChart"></canvas>
-      </div>
+    <div class="grid" style="align-content:start">
+        {{ coin_card(a, rows_a, '#6c8cff') }}
+        {{ coin_card(b, rows_b, '#f6b44b') }}
     </div>
+</section>
 
-    <div class="side-by-side">
-      <div class="col">
-        <h4>{{ a }} — Latest</h4>
-        {% if rows_a %}
-          <div>Price: <strong>${{ "%.2f"|format(rows_a[0].close) }}</strong></div>
-          <div>Volume: {{ "%.2f"|format(rows_a[0].volume) }}</div>
-          <div>Market cap: {{ "%.2f"|format(rows_a[0].market_cap) }}</div>
-        {% else %}
-          <div>No data for {{ a }}</div>
-        {% endif %}
-      </div>
-
-      <div class="col">
-        <h4>{{ b }} — Latest</h4>
-        {% if rows_b %}
-          <div>Price: <strong>${{ "%.2f"|format(rows_b[0].close) }}</strong></div>
-          <div>Volume: {{ "%.2f"|format(rows_b[0].volume) }}</div>
-          <div>Market cap: {{ "%.2f"|format(rows_b[0].market_cap) }}</div>
-        {% else %}
-          <div>No data for {{ b }}</div>
-        {% endif %}
-      </div>
+<section class="card mt-lg">
+    <div class="card-head"><h2>Daily close</h2><span class="hint">side by side</span></div>
+    <div class="card-body" style="padding: 8px 6px 6px">
+        <div class="table-wrap">
+            <table class="t compact">
+                <thead><tr><th>Date</th><th class="r">{{ a }}</th><th class="r">{{ b }}</th></tr></thead>
+                <tbody>
+                {% for row in paired[:30] %}
+                <tr>
+                    <td class="num text-2">{{ row.date }}</td>
+                    <td class="r num">{{ row.a|price }}</td>
+                    <td class="r num">{{ row.b|price }}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
+</section>
+{% endblock %}
 
-    <div class="panel">
-      <h3>Recent values (side-by-side)</h3>
-      <table class="compare-table">
-        <thead>
-          <tr><th>Date</th><th>{{ a }}</th><th>{{ b }}</th></tr>
-        </thead>
-        <tbody>
-          {% for row in paired %}
-          <tr>
-            <td>{{ row.date }}</td>
-            <td>{{ row.a if row.a is not none else 'N/A' }}</td>
-            <td>{{ row.b if row.b is not none else 'N/A' }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-
-  </div>
-
+{% block scripts %}
 <script>
 {% if paired %}
-const labels = {{ paired | map(attribute='date') | list | tojson }};
-const dataA  = {{ paired | map(attribute='a') | list | tojson }};
-const dataB  = {{ paired | map(attribute='b') | list | tojson }};
+    const rows = {{ paired|tojson }}.slice().reverse();
+    const labels = rows.map(r => r.date);
+    const A = rows.map(r => r.a), B = rows.map(r => r.b);
+    const base = arr => arr.find(v => v !== null);
+    const pct = arr => { const b0 = base(arr); return arr.map(v => v === null ? null : (v / b0 - 1) * 100); };
+    const colA = '#6c8cff', colB = '#f6b44b';
 
-const ctx = document.getElementById("compareChart");
+    const ds = (label, data, color, axis) => ({
+        label, data, yAxisID: axis, borderColor: color, borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
+        pointHoverBackgroundColor: color, tension: 0.25, fill: false, spanGaps: true
+    });
 
-new Chart(ctx, {
-    type: "line",
-    data: {
-        labels: labels,
-        datasets: [
-            {
-                label: "{{ a }}",
-                data: dataA,
-                borderWidth: 2,
-                tension: 0.3
+    const chart = new Chart(document.getElementById('compareChart'), {
+        type: 'line',
+        data: { labels, datasets: [ds('{{ a }}', pct(A), colA, 'y'), ds('{{ b }}', pct(B), colB, 'y')] },
+        options: {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'top', align: 'start', labels: { color: DC.text2 } },
+                tooltip: { displayColors: true, callbacks: {
+                    label: c => {
+                        const raw = (c.datasetIndex === 0 ? A : B)[c.dataIndex];
+                        return chart.$mode === 'abs' ? ` ${c.dataset.label}  ${fmtPrice(raw)}`
+                             : ` ${c.dataset.label}  ${c.parsed.y >= 0 ? '+' : ''}${c.parsed.y.toFixed(2)}%  (${fmtPrice(raw)})`;
+                    } } }
             },
-            {
-                label: "{{ b }}",
-                data: dataB,
-                borderWidth: 2,
-                tension: 0.3
+            scales: {
+                x: { grid: { display: false }, ticks: { maxTicksLimit: 7, maxRotation: 0 } },
+                y: { position: 'right', grid: { color: DC.grid }, border: { display: false }, ticks: { callback: v => (v > 0 ? '+' : '') + v.toFixed(0) + '%' } },
+                y2: { display: false, position: 'left', grid: { display: false }, border: { display: false }, ticks: { callback: v => fmtPrice(v) } }
             }
-        ]
-    },
-    options: {
-        responsive: true,
-        plugins: {
-            legend: { position: "top" }
-        },
-        scales: {
-            x: { ticks: { maxTicksLimit: 10 } }
         }
-    }
-});
+    });
+    chart.$mode = 'pct';
+
+    document.querySelectorAll('#mode button').forEach(btn => btn.addEventListener('click', () => {
+        document.querySelectorAll('#mode button').forEach(x => x.classList.remove('on'));
+        btn.classList.add('on');
+        chart.$mode = btn.dataset.mode;
+        if (chart.$mode === 'abs') {
+            chart.data.datasets[0].data = A; chart.data.datasets[0].yAxisID = 'y';
+            chart.data.datasets[1].data = B; chart.data.datasets[1].yAxisID = 'y2';
+            chart.options.scales.y.ticks.callback = v => fmtPrice(v);
+            chart.options.scales.y2.display = true;
+        } else {
+            chart.data.datasets[0].data = pct(A); chart.data.datasets[0].yAxisID = 'y';
+            chart.data.datasets[1].data = pct(B); chart.data.datasets[1].yAxisID = 'y';
+            chart.options.scales.y.ticks.callback = v => (v > 0 ? '+' : '') + v.toFixed(0) + '%';
+            chart.options.scales.y2.display = false;
+        }
+        chart.update();
+    }));
 {% endif %}
 </script>
-
-</body>
-</html>
+{% endblock %}
