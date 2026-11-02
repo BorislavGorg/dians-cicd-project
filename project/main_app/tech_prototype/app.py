@@ -235,7 +235,7 @@ def analysis_page():
         "volume": "sum"
     }).dropna()
 
-    monthly_df = df.resample("M").agg({
+    monthly_df = df.resample("ME").agg({
         "open": "first",
         "high": "max",
         "low": "min",
