@@ -40,7 +40,7 @@
         <div class="label">Top gainer · 24h</div>
         {% if top_gainer %}
         <a href="/coin?symbol={{ top_gainer.symbol }}" class="coin" style="margin-top:10px">
-            <span class="coin-icon" style="--h: {{ coin_hue(top_gainer.symbol) }}">{{ top_gainer.symbol[:4] }}</span>
+            {{ coin_icon(top_gainer.symbol) }}
             <span>
                 <div class="coin-name">{{ top_gainer.name }}</div>
                 <span class="chip {{ 'up' if top_gainer.change_24h >= 0 else 'down' }}">{{ top_gainer.change_24h|pct }}</span>
@@ -52,7 +52,7 @@
         <div class="label">Top loser · 24h</div>
         {% if top_loser %}
         <a href="/coin?symbol={{ top_loser.symbol }}" class="coin" style="margin-top:10px">
-            <span class="coin-icon" style="--h: {{ coin_hue(top_loser.symbol) }}">{{ top_loser.symbol[:4] }}</span>
+            {{ coin_icon(top_loser.symbol) }}
             <span>
                 <div class="coin-name">{{ top_loser.name }}</div>
                 <span class="chip {{ 'up' if top_loser.change_24h >= 0 else 'down' }}">{{ top_loser.change_24h|pct }}</span>
@@ -88,7 +88,7 @@
                     <td class="rank">{{ loop.index }}</td>
                     <td>
                         <a class="coin" href="/coin?symbol={{ c.symbol }}">
-                            <span class="coin-icon" style="--h: {{ coin_hue(c.symbol) }}">{{ c.symbol[:4] }}</span>
+                            {{ coin_icon(c.symbol) }}
                             <span><div class="coin-name">{{ c.name }}</div><div class="coin-sym">{{ c.symbol }}</div></span>
                         </a>
                     </td>
@@ -116,7 +116,7 @@
             <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>
         </div>
         <h3>No market data yet</h3>
-        <p>The database is empty. Fetch one year of daily prices for 22 coins from CoinGecko — it takes a few minutes.</p>
+        <p>The database is empty. Fetch one year of daily prices for the top 100 coins from CoinGecko — the first run takes 10–15 minutes.</p>
         <form method="post" action="/run-fetch" style="margin:0">
             <button class="btn btn-primary" type="submit">Fetch data now</button>
         </form>

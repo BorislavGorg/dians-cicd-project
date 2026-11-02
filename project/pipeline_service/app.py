@@ -1,7 +1,7 @@
 import os
 import threading
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import requests
 from flask import Flask, jsonify
@@ -22,6 +22,7 @@ db = SQLAlchemy(app)
 
 
 class Crypto(db.Model):
+    """Дневни податоци (OHLC, волумен, market cap) за секоја валута."""
     __tablename__ = "crypto_database"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
@@ -36,50 +37,62 @@ class Crypto(db.Model):
     favorite = db.Column(db.Boolean, default=False)
 
 
-# Криптовалути што ги повлекува pipeline-от (симбол -> CoinGecko id)
-SYMBOL_TO_COINGECKO_ID = {
-    "BTC": "bitcoin",
-    "ETH": "ethereum",
-    "BNB": "binancecoin",
-    "SOL": "solana",
-    "XRP": "ripple",
-    "ADA": "cardano",
-    "DOGE": "dogecoin",
-    "TRX": "tron",
-    "DOT": "polkadot",
-    "AVAX": "avalanche-2",
-    "LINK": "chainlink",
-    "LTC": "litecoin",
-    "BCH": "bitcoin-cash",
-    "XLM": "stellar",
-    "ATOM": "cosmos",
-    "UNI": "uniswap",
-    "NEAR": "near",
-    "SHIB": "shiba-inu",
-    "ETC": "ethereum-classic",
-    "QTUM": "qtum",
-    "ICX": "icon",
-    "TUSD": "true-usd",
-}
+class CoinInfo(db.Model):
+    """Метаподатоци за валутата: име, лого и ранг по market cap."""
+    __tablename__ = "coin_info"
 
+    symbol = db.Column(db.String, primary_key=True)
+    coingecko_id = db.Column(db.String)
+    name = db.Column(db.String)
+    image = db.Column(db.String)
+    market_cap_rank = db.Column(db.Integer)
+    updated_at = db.Column(db.DateTime)
+
+
+# ---------------------------------------------------------------
+# Конфигурација
+# ---------------------------------------------------------------
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
+# Колку валути (по market cap) да се повлечат
+COINS_LIMIT = int(os.environ.get("COINS_LIMIT", "100"))
 # Дневна историја за 1 година (доволно за LSTM моделот со lookback=30)
 HISTORY_DAYS = 365
-# CoinGecko враќа дневни OHLC свеќи само за последните 30 дена
+# CoinGecko враќа дневни OHLC свеќи само за последните 30 дена;
+# тие се повлекуваат само за најголемите валути за да се штедат барања
 OHLC_DAYS = 30
+OHLC_TOP_N = int(os.environ.get("OHLC_TOP_N", "25"))
+# Опционален бесплатен "demo" API клуч - овозможува повеќе барања во минута
+COINGECKO_API_KEY = os.environ.get("COINGECKO_API_KEY", "").strip()
+
 # Бесплатниот CoinGecko API има ограничување на бројот на барања во минута,
 # затоа правиме пауза меѓу барањата и повторен обид при 429 (Too Many Requests)
-REQUEST_DELAY_SECONDS = 3
-RATE_LIMIT_WAIT_SECONDS = 20
-MAX_RETRIES = 4
+REQUEST_DELAY_SECONDS = float(os.environ.get("REQUEST_DELAY_SECONDS", "2.5" if COINGECKO_API_KEY else "4"))
+RATE_LIMIT_WAIT_SECONDS = 30
+MAX_RETRIES = 6
+
+# Резервна листа ако повикот за топ валути не успее
+FALLBACK_COINS = {
+    "BTC": "bitcoin", "ETH": "ethereum", "BNB": "binancecoin", "SOL": "solana",
+    "XRP": "ripple", "ADA": "cardano", "DOGE": "dogecoin", "TRX": "tron",
+    "DOT": "polkadot", "AVAX": "avalanche-2", "LINK": "chainlink", "LTC": "litecoin",
+    "BCH": "bitcoin-cash", "XLM": "stellar", "ATOM": "cosmos", "UNI": "uniswap",
+    "NEAR": "near", "SHIB": "shiba-inu", "ETC": "ethereum-classic",
+}
 
 
 def get_json(url, params):
+    headers = {"accept": "application/json"}
+    if COINGECKO_API_KEY:
+        headers["x-cg-demo-api-key"] = COINGECKO_API_KEY
     for attempt in range(MAX_RETRIES):
         time.sleep(REQUEST_DELAY_SECONDS)
-        resp = requests.get(url, params=params, timeout=30)
+        resp = requests.get(url, params=params, headers=headers, timeout=30)
         if resp.status_code == 429 and attempt < MAX_RETRIES - 1:
-            time.sleep(RATE_LIMIT_WAIT_SECONDS)
+            wait = resp.headers.get("Retry-After")
+            wait = int(wait) if wait and wait.isdigit() else RATE_LIMIT_WAIT_SECONDS
+            last_run["note"] = f"CoinGecko rate limit – waiting {wait}s"
+            time.sleep(min(wait, 90))
+            last_run.pop("note", None)
             continue
         resp.raise_for_status()
         return resp.json()
@@ -89,17 +102,48 @@ def to_date(ts):
     return datetime.fromtimestamp(ts / 1000, tz=timezone.utc).date()
 
 
-def fetch_symbol_data(symbol, coingecko_id):
-    """Повлекува дневни цени, волумен и market cap за една година,
-    а за последните 30 дена и вистински OHLC (open/high/low/close) вредности."""
+def fetch_top_coins(limit):
+    """Ги враќа најголемите валути по market cap (една страница = до 250)."""
+    coins, page = [], 1
+    while len(coins) < limit:
+        per_page = min(250, limit - len(coins))
+        data = get_json(f"{COINGECKO_BASE}/coins/markets", {
+            "vs_currency": "usd", "order": "market_cap_desc",
+            "per_page": per_page, "page": page, "sparkline": "false",
+        })
+        if not data:
+            break
+        coins.extend(data)
+        page += 1
+    return coins[:limit]
+
+
+def save_coin_info(markets):
+    """Ги зачувува имињата и логоата; првиот (најголем) добива симбол ако се повторува."""
+    seen = {}
+    for c in markets:
+        sym = (c.get("symbol") or "").upper()
+        if not sym or sym in seen:
+            continue
+        seen[sym] = c
+        info = db.session.get(CoinInfo, sym) or CoinInfo(symbol=sym)
+        info.coingecko_id = c.get("id")
+        info.name = c.get("name")
+        info.image = c.get("image")
+        info.market_cap_rank = c.get("market_cap_rank")
+        info.updated_at = datetime.now(timezone.utc)
+        db.session.merge(info)
+    db.session.commit()
+    return {sym: c["id"] for sym, c in seen.items()}
+
+
+def fetch_symbol_data(symbol, coingecko_id, days, with_ohlc):
+    """Повлекува дневни цени, волумен и market cap; за најголемите валути
+    и вистински OHLC (open/high/low/close) вредности за последните 30 дена."""
 
     chart_data = get_json(
         f"{COINGECKO_BASE}/coins/{coingecko_id}/market_chart",
-        {"vs_currency": "usd", "days": HISTORY_DAYS, "interval": "daily"},
-    )
-    ohlc_data = get_json(
-        f"{COINGECKO_BASE}/coins/{coingecko_id}/ohlc",
-        {"vs_currency": "usd", "days": OHLC_DAYS},
+        {"vs_currency": "usd", "days": days, "interval": "daily"},
     )
 
     volumes_by_date = {to_date(ts): v for ts, v in chart_data.get("total_volumes", [])}
@@ -109,6 +153,8 @@ def fetch_symbol_data(symbol, coingecko_id):
     rows_by_date = {}
     prev_close = None
     for ts, price in chart_data.get("prices", []):
+        if price is None:
+            continue
         d = to_date(ts)
         open_price = prev_close if prev_close is not None else price
         rows_by_date[d] = {
@@ -124,39 +170,59 @@ def fetch_symbol_data(symbol, coingecko_id):
         prev_close = price
 
     # Каде што има OHLC свеќи, ги користиме вистинските open/high/low/close
-    candles_by_date = {}
-    for ts, o, h, l, c in ohlc_data:
-        candles_by_date.setdefault(to_date(ts), []).append((o, h, l, c))
-    for d, candles in candles_by_date.items():
-        row = rows_by_date.get(d)
-        if row is None:
-            continue
-        row["open"] = candles[0][0]
-        row["high"] = max(c[1] for c in candles)
-        row["low"] = min(c[2] for c in candles)
-        row["close"] = candles[-1][3]
+    if with_ohlc:
+        ohlc_data = get_json(
+            f"{COINGECKO_BASE}/coins/{coingecko_id}/ohlc",
+            {"vs_currency": "usd", "days": OHLC_DAYS},
+        )
+        candles_by_date = {}
+        for ts, o, h, l, c in ohlc_data:
+            candles_by_date.setdefault(to_date(ts), []).append((o, h, l, c))
+        for d, candles in candles_by_date.items():
+            row = rows_by_date.get(d)
+            if row is None:
+                continue
+            row["open"] = candles[0][0]
+            row["high"] = max(c[1] for c in candles)
+            row["low"] = min(c[2] for c in candles)
+            row["close"] = candles[-1][3]
 
     return list(rows_by_date.values())
 
 
-def upsert_rows(rows):
+def upsert_rows(symbol, rows):
+    """Вметнува нови и ажурира постоечки редови (еден SELECT по валута)."""
+    if not rows:
+        return 0, 0
+    dates = [r["date"] for r in rows]
+    existing = {
+        r.date: r for r in Crypto.query
+        .filter(Crypto.symbol == symbol, Crypto.date >= min(dates))
+        .all()
+    }
     inserted, updated = 0, 0
     for row in rows:
-        existing = Crypto.query.filter_by(symbol=row["symbol"], date=row["date"]).first()
-        if existing:
-            existing.open = row["open"]
-            existing.high = row["high"]
-            existing.low = row["low"]
-            existing.close = row["close"]
-            existing.volume = row["volume"]
-            existing.market_cap = row["market_cap"]
+        current = existing.get(row["date"])
+        if current:
+            for key in ("open", "high", "low", "close", "volume", "market_cap"):
+                setattr(current, key, row[key])
             updated += 1
         else:
             db.session.add(Crypto(**row))
             inserted += 1
-
     db.session.commit()
     return inserted, updated
+
+
+def days_to_fetch(symbol, today):
+    """Колку денови назад треба да се повлечат (инкрементално ажурирање)."""
+    latest = db.session.query(db.func.max(Crypto.date)).filter(Crypto.symbol == symbol).scalar()
+    if latest is None:
+        return HISTORY_DAYS
+    gap = (today - latest).days
+    if gap <= 0:
+        return 0  # веќе е ажурно денес
+    return min(HISTORY_DAYS, gap + 2)
 
 
 @app.route("/health")
@@ -169,28 +235,45 @@ last_run = {"status": "never_run"}
 
 
 def run_pipeline_job():
-    """Ги повлекува сите валути една по една и ги запишува во базата."""
+    """Ги повлекува најголемите валути една по една и ги запишува во базата."""
     global last_run
     summary = {}
     total_inserted, total_updated = 0, 0
-    last_run = {"status": "running", "started_at": datetime.now(timezone.utc).isoformat()}
+    last_run = {"status": "running", "started_at": datetime.now(timezone.utc).isoformat(), "progress": "0/?"}
 
     with app.app_context():
-        for symbol, coingecko_id in SYMBOL_TO_COINGECKO_ID.items():
+        try:
+            markets = fetch_top_coins(COINS_LIMIT)
+            coins = save_coin_info(markets)
+        except Exception as exc:
+            db.session.rollback()
+            summary["_markets"] = {"error": str(exc)}
+            coins = dict(FALLBACK_COINS)
+
+        today = datetime.now(timezone.utc).date()
+        total = len(coins)
+        for i, (symbol, coingecko_id) in enumerate(coins.items()):
+            last_run["progress"] = f"{i}/{total}"
+            last_run["current"] = symbol
             try:
-                rows = fetch_symbol_data(symbol, coingecko_id)
-                inserted, updated = upsert_rows(rows)
+                days = days_to_fetch(symbol, today)
+                if days == 0:
+                    summary[symbol] = {"skipped": "up to date"}
+                    continue
+                rows = fetch_symbol_data(symbol, coingecko_id, days, with_ohlc=i < OHLC_TOP_N)
+                inserted, updated = upsert_rows(symbol, rows)
                 total_inserted += inserted
                 total_updated += updated
                 summary[symbol] = {"inserted": inserted, "updated": updated}
             except Exception as exc:
                 db.session.rollback()
                 summary[symbol] = {"error": str(exc)}
-            last_run["progress"] = f"{len(summary)}/{len(SYMBOL_TO_COINGECKO_ID)}"
+        last_run["progress"] = f"{total}/{total}"
 
     last_run = {
         "status": "completed",
         "finished_at": datetime.now(timezone.utc).isoformat(),
+        "coins": len(summary),
         "total_inserted": total_inserted,
         "total_updated": total_updated,
         "details": summary,

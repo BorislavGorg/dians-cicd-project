@@ -5,11 +5,12 @@ from flask_cors import CORS
 import pandas as pd
 import requests
 
-from flask import Flask, render_template, request, redirect, url_for, send_file
+from flask import Flask, render_template, request, redirect, url_for, send_file, g
+from markupsafe import Markup, escape
 from sqlalchemy import func
 
 from ext import db
-from models import Crypto
+from models import Crypto, CoinInfo
 
 
 from lstm import train_lstm, load_trained_model, forecast_future
@@ -39,8 +40,30 @@ COIN_NAMES = {
 }
 
 
+def coin_meta():
+    """Имиња и логоа од табелата coin_info (се вчитуваат еднаш по барање)."""
+    if "coin_meta" not in g:
+        try:
+            g.coin_meta = {c.symbol: c for c in CoinInfo.query.all()}
+        except Exception:
+            db.session.rollback()
+            g.coin_meta = {}
+    return g.coin_meta
+
+
 def coin_name(symbol):
+    info = coin_meta().get(symbol)
+    if info and info.name:
+        return info.name
     return COIN_NAMES.get(symbol, symbol)
+
+
+def coin_icon(symbol, size=""):
+    info = coin_meta().get(symbol)
+    cls = f"coin-icon {size}".strip()
+    if info and info.image:
+        return Markup(f'<img class="{cls} img" src="{escape(info.image)}" alt="{escape(symbol)}" loading="lazy">')
+    return Markup(f'<span class="{cls}" style="--h: {coin_hue(symbol)}">{escape((symbol or "")[:4])}</span>')
 
 
 def pct_change(new, old):
@@ -85,7 +108,7 @@ def coin_hue(symbol):
 
 @app.context_processor
 def inject_helpers():
-    return {"coin_name": coin_name, "coin_hue": coin_hue}
+    return {"coin_name": coin_name, "coin_hue": coin_hue, "coin_icon": coin_icon}
 
 
 # -------------------------------------------------

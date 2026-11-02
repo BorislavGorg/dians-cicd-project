@@ -9,7 +9,7 @@
     {% set chg = ((last.close - first.close) / first.close * 100) if first.close else none %}
     <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px">
         <a class="coin" href="/coin?symbol={{ sym }}">
-            <span class="coin-icon" style="--h: {{ coin_hue(sym) }}">{{ sym[:4] }}</span>
+            {{ coin_icon(sym) }}
             <span><div class="coin-name">{{ coin_name(sym) }}</div><div class="coin-sym">{{ sym }}</div></span>
         </a>
         <span style="width:22px; height:4px; border-radius:4px; background: {{ color }}; margin-top:14px"></span>

@@ -6,7 +6,7 @@
 
 <div class="page-head">
     <div class="coin">
-        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        {{ coin_icon(symbol, 'lg') }}
         <div>
             <h1>LSTM model trained</h1>
             <p>{{ full_name }} · evaluated on the last 30% of the price history (test set)</p>

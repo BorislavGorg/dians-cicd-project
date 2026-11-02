@@ -280,3 +280,6 @@ table.t { width: 100%; border-collapse: collapse; }
   .hide-sm { display: none; }
   .search { min-width: 0; width: 100%; }
 }
+
+/* лого на валутата од CoinGecko */
+img.coin-icon.img { background: var(--surface-3); box-shadow: 0 0 0 1px var(--border); object-fit: cover; padding: 0; }

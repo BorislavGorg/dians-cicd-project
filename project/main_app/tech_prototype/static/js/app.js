@@ -126,9 +126,15 @@
         const s = await (await fetch('/fetch-status')).json();
         if (s.status === 'running') {
           seenRunning = true;
-          const [done, total] = (s.progress || '0/1').split('/').map(Number);
-          bar.style.width = Math.max(4, done / total * 100) + '%';
-          text.textContent = `Повлечени ${done} од ${total} валути од CoinGecko…`;
+          const [done, total] = (s.progress || '0/?').split('/').map(Number);
+          if (!total) {
+            bar.style.width = '4%';
+            text.textContent = 'Ја вчитувам листата на најголеми валути…';
+          } else {
+            bar.style.width = Math.max(4, done / total * 100) + '%';
+            text.textContent = s.note ? `${done}/${total} · ${s.note}`
+              : `Повлечени ${done} од ${total} валути${s.current ? ' · ' + s.current : ''}…`;
+          }
         } else if (s.status === 'completed' && seenRunning) {
           bar.style.width = '100%';
           text.textContent = 'Готово! Се освежува…';

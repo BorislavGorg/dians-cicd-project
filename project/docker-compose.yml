@@ -27,6 +27,8 @@ services:
       - "5001:5001"
     environment:
       DATABASE_URL: "postgresql+psycopg2://postgres:dejvid77@db:5432/dians"
+      COINS_LIMIT: "100"
+      COINGECKO_API_KEY: "${COINGECKO_API_KEY:-}"
     depends_on:
       db:
         condition: service_healthy

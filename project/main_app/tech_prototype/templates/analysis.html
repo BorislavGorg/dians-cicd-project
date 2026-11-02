@@ -11,7 +11,7 @@
 
 <div class="page-head">
     <div class="coin">
-        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        {{ coin_icon(symbol, 'lg') }}
         <div>
             <h1>Technical analysis</h1>
             <p>{{ full_name }} · SMA crossover, RSI and MACD on three timeframes</p>

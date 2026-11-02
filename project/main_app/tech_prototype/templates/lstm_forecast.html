@@ -8,7 +8,7 @@
 
 <div class="page-head">
     <div class="coin">
-        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        {{ coin_icon(symbol, 'lg') }}
         <div>
             <h1>7-day price forecast</h1>
             <p>{{ full_name }} · LSTM neural network, 30-day lookback window</p>

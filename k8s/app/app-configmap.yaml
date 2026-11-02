@@ -8,3 +8,5 @@ metadata:
 data:
   FETCH_MICROSERVICE_URL: "http://pipeline-service:5001"
   TECHNICAL_ANALYSIS_MICROSERVICE_URL: "http://technical-analysis-service:5002"
+  # Колку најголеми валути (по market cap) да повлече pipeline-от
+  COINS_LIMIT: "100"

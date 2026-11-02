@@ -6,7 +6,7 @@
 
 <div class="page-head">
     <div class="coin">
-        <span class="coin-icon lg" style="--h: {{ coin_hue(symbol) }}">{{ symbol[:4] }}</span>
+        {{ coin_icon(symbol, 'lg') }}
         <div>
             <h1 style="display:flex; align-items:center; gap:10px">{{ full_name }} <span class="coin-sym" style="font-size:15px">{{ symbol }}</span></h1>
             <div style="display:flex; align-items:center; gap:12px; margin-top:6px">

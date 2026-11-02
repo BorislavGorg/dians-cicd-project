@@ -14,7 +14,7 @@
     {% for s in symbols %}
     <a class="tile" href="/coin?symbol={{ s }}" data-search="{{ (s ~ ' ' ~ coin_name(s))|lower }}">
         <span class="coin">
-            <span class="coin-icon" style="--h: {{ coin_hue(s) }}">{{ s[:4] }}</span>
+            {{ coin_icon(s) }}
             <span><div class="coin-name">{{ coin_name(s) }}</div><div class="coin-sym">{{ s }}</div></span>
         </span>
         <span class="arrow">→</span>

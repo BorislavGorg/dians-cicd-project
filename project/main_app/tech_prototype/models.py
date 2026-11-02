@@ -18,6 +18,17 @@ class Crypto(db.Model):
     favorite = db.Column(db.Boolean, default=False)
 
 
+class CoinInfo(db.Model):
+    """Име, лого и ранг на валутата (ја полни pipeline_service)."""
+    __tablename__ = 'coin_info'
+    symbol = db.Column(db.String, primary_key=True)
+    coingecko_id = db.Column(db.String)
+    name = db.Column(db.String)
+    image = db.Column(db.String)
+    market_cap_rank = db.Column(db.Integer)
+    updated_at = db.Column(db.DateTime)
+
+
 Base = db.Model
 
 DATABASE_URL = os.environ.get(
