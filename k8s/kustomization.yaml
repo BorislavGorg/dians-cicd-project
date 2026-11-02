@@ -1,0 +1,29 @@
+# Kustomize ги собира сите манифести на апликацијата на едно место.
+# Argo CD ја чита оваа датотека, а CD job-от во GitHub Actions
+# автоматски ги менува newTag вредностите со git SHA на новиот build.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - db/db-configmap.yaml
+  - db/db-secret.yaml
+  - db/db-service.yaml
+  - db/db-statefulset.yaml
+  - app/app-configmap.yaml
+  - app/app-secret.yaml
+  - app/main-app-deployment.yaml
+  - app/main-app-service.yaml
+  - app/pipeline-deployment.yaml
+  - app/pipeline-service.yaml
+  - app/tech-analysis-deployment.yaml
+  - app/tech-analysis-service.yaml
+  - ingress.yaml
+
+images:
+  - name: borislavgorg/dians-main-app
+    newTag: latest
+  - name: borislavgorg/dians-pipeline-service
+    newTag: latest
+  - name: borislavgorg/dians-technical-analysis-service
+    newTag: latest

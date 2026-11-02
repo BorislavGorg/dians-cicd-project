@@ -127,3 +127,25 @@ StatefulSet-от го рекреира, а податоците останува
 kubectl delete pod dians-db-0 -n dians-crypto
 kubectl get pods -n dians-crypto -w
 ```
+
+## CD со Argo CD (GitOps)
+
+Pipeline-от има и **deploy** job кој се извршува по успешниот build:
+го запишува новиот таг на имиџите (краток git SHA) во `k8s/kustomization.yaml`
+и прави commit. Argo CD го следи `k8s/` директориумот во репото и
+автоматски ја поставува новата верзија на кластерот.
+
+```bash
+# Инсталација на Argo CD
+kubectl create namespace argocd
+kubectl apply -n argocd --server-side --force-conflicts -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+# Application што го следи ова репо
+kubectl apply -f argocd/application.yaml
+
+# Веб интерфејс: https://localhost:8081 (корисник admin)
+kubectl port-forward svc/argocd-server -n argocd 8081:443
+```
+
+> По секој push, CI прави commit со новите тагови, па пред следниот
+> push треба `git pull --rebase`.

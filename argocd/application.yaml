@@ -1,0 +1,22 @@
+# Argo CD Application: го следи k8s/ директориумот во GitHub репото
+# и автоматски го синхронизира кластерот со состојбата во git (GitOps).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: dians-crypto
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/BorislavGorg/dians-cicd-project.git
+    targetRevision: main
+    path: k8s
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: dians-crypto
+  syncPolicy:
+    automated:
+      prune: true      # бриши ресурси што се избришани од git
+      selfHeal: true   # врати ја состојбата ако некој рачно смени нешто во кластерот
+    syncOptions:
+      - CreateNamespace=true
