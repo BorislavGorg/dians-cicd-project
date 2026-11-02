@@ -11,7 +11,7 @@ CORS(app)
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:dejvid77@db:5432/dians"
+    "postgresql+psycopg2://postgres:dejvid77@db:5432/dians"
 )
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False

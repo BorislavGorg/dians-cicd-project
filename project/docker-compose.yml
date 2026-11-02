@@ -26,7 +26,7 @@ services:
     ports:
       - "5001:5001"
     environment:
-      DATABASE_URL: "postgresql://postgres:dejvid77@db:5432/dians"
+      DATABASE_URL: "postgresql+psycopg2://postgres:dejvid77@db:5432/dians"
     depends_on:
       db:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: "postgresql://postgres:dejvid77@db:5432/dians"
+      DATABASE_URL: "postgresql+psycopg2://postgres:dejvid77@db:5432/dians"
       FETCH_MICROSERVICE_URL: "http://pipeline_service:5001"
       TECHNICAL_ANALYSIS_MICROSERVICE_URL: "http://technical_analysis_service:5002"
     depends_on:

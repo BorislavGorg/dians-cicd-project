@@ -22,7 +22,7 @@ Base = db.Model
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL",
-    "postgresql://postgres:dejvid77@db:5432/dians"
+    "postgresql+psycopg2://postgres:dejvid77@db:5432/dians"
 )
 engine = create_engine(DATABASE_URL)
 Session = sessionmaker(bind=engine)
