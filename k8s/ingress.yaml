@@ -7,6 +7,9 @@ metadata:
     app.kubernetes.io/part-of: dians-crypto-analytics
   annotations:
     nginx.ingress.kubernetes.io/proxy-body-size: "10m"
+    # Повлекувањето податоци (/run-fetch) трае подолго од стандардните 60s
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
 spec:
   ingressClassName: nginx
   rules:

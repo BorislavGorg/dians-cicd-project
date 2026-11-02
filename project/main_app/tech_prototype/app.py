@@ -37,7 +37,7 @@ TECHNICAL_ANALYSIS_SERVICE_URL = os.environ.get(
 @app.route("/run-fetch", methods=["POST"])
 def run_fetch():
     try:
-        r = requests.post(f"{PIPELINE_SERVICE_URL}/run-pipeline", timeout=300)
+        r = requests.post(f"{PIPELINE_SERVICE_URL}/run-pipeline", timeout=600)
         if r.status_code != 200:
             print("Pipeline error:", r.text)
     except Exception as e:

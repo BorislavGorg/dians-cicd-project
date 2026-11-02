@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime, timezone
 
 import requests
@@ -49,26 +50,36 @@ SYMBOL_TO_COINGECKO_ID = {
 
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
 HISTORY_DAYS = 30
+# Бесплатниот CoinGecko API има ограничување на бројот на барања во минута,
+# затоа правиме пауза меѓу барањата и повторен обид при 429 (Too Many Requests)
+REQUEST_DELAY_SECONDS = 2
+RATE_LIMIT_WAIT_SECONDS = 20
+MAX_RETRIES = 4
+
+
+def get_json(url, params):
+    for attempt in range(MAX_RETRIES):
+        time.sleep(REQUEST_DELAY_SECONDS)
+        resp = requests.get(url, params=params, timeout=30)
+        if resp.status_code == 429 and attempt < MAX_RETRIES - 1:
+            time.sleep(RATE_LIMIT_WAIT_SECONDS)
+            continue
+        resp.raise_for_status()
+        return resp.json()
 
 
 def fetch_symbol_data(symbol, coingecko_id):
     """Fetch OHLC + volume/market cap data for a given symbol from CoinGecko."""
 
-    ohlc_resp = requests.get(
+    ohlc_data = get_json(
         f"{COINGECKO_BASE}/coins/{coingecko_id}/ohlc",
-        params={"vs_currency": "usd", "days": HISTORY_DAYS},
-        timeout=30,
+        {"vs_currency": "usd", "days": HISTORY_DAYS},
     )
-    ohlc_resp.raise_for_status()
-    ohlc_data = ohlc_resp.json()
 
-    chart_resp = requests.get(
+    chart_data = get_json(
         f"{COINGECKO_BASE}/coins/{coingecko_id}/market_chart",
-        params={"vs_currency": "usd", "days": HISTORY_DAYS, "interval": "daily"},
-        timeout=30,
+        {"vs_currency": "usd", "days": HISTORY_DAYS, "interval": "daily"},
     )
-    chart_resp.raise_for_status()
-    chart_data = chart_resp.json()
 
     volumes_by_date = {}
     for ts, vol in chart_data.get("total_volumes", []):
