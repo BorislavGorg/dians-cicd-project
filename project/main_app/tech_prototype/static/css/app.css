@@ -61,7 +61,7 @@ a { color: inherit; text-decoration: none; }
   border-bottom: 1px solid var(--border);
 }
 .topbar-inner {
-  max-width: 1240px; margin: 0 auto; padding: 0 24px;
+  max-width: 1520px; margin: 0 auto; padding: 0 24px;
   height: 64px; display: flex; align-items: center; gap: 32px;
 }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; letter-spacing: -0.02em; }
@@ -91,7 +91,7 @@ a { color: inherit; text-decoration: none; }
 }
 
 /* ---------- Layout ---------- */
-.page { max-width: 1240px; width: 100%; margin: 0 auto; padding: 32px 24px 56px; flex: 1; }
+.page { max-width: 1520px; width: 100%; margin: 0 auto; padding: 32px 24px 56px; flex: 1; }
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 28px; }
 .page-head h1 { margin: 0; font-size: 28px; letter-spacing: -0.03em; font-weight: 700; }
 .page-head p { margin: 6px 0 0; color: var(--text-2); }
@@ -193,10 +193,10 @@ a { color: inherit; text-decoration: none; }
 table.t { width: 100%; border-collapse: collapse; }
 .t th {
   text-align: left; font-size: 11.5px; font-weight: 600; color: var(--muted);
-  text-transform: uppercase; letter-spacing: 0.07em; padding: 12px 16px;
+  text-transform: uppercase; letter-spacing: 0.07em; padding: 12px 14px;
   border-bottom: 1px solid var(--border); white-space: nowrap;
 }
-.t td { padding: 14px 16px; border-bottom: 1px solid rgba(34,44,65,0.6); white-space: nowrap; }
+.t td { padding: 14px 14px; border-bottom: 1px solid rgba(34,44,65,0.6); white-space: nowrap; }
 .t tbody tr { transition: background .12s; }
 .t tbody tr:hover { background: rgba(108,140,255,0.05); }
 .t tbody tr:last-child td { border-bottom: 0; }
@@ -204,7 +204,7 @@ table.t { width: 100%; border-collapse: collapse; }
 .t .rank { color: var(--muted); width: 36px; font-family: var(--mono); font-size: 12.5px; }
 .t tr.link { cursor: pointer; }
 .t.compact td { padding: 10px 16px; }
-.spark { width: 120px; height: 36px; display: block; margin-left: auto; }
+.spark { width: 110px; height: 36px; display: block; margin-left: auto; }
 
 /* ---------- Key-value list ---------- */
 .kv { display: flex; flex-direction: column; }
@@ -264,7 +264,7 @@ table.t { width: 100%; border-collapse: collapse; }
 
 /* ---------- Footer ---------- */
 .footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 12.5px; }
-.footer-inner { max-width: 1240px; margin: 0 auto; padding: 18px 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.footer-inner { max-width: 1520px; margin: 0 auto; padding: 18px 24px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1080px) {
@@ -283,3 +283,8 @@ table.t { width: 100%; border-collapse: collapse; }
 
 /* лого на валутата од CoinGecko */
 img.coin-icon.img { background: var(--surface-3); box-shadow: 0 0 0 1px var(--border); object-fit: cover; padding: 0; }
+
+/* долги имиња (на пр. „Binance Bridged USDT“) не смеат да ја прошируваат табелата */
+.t .coin-name { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.t .coin > span:last-child { min-width: 0; }
+@media (max-width: 1100px) { .t .coin-name { max-width: 150px; } }

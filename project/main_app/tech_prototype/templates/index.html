@@ -89,7 +89,7 @@
                     <td>
                         <a class="coin" href="/coin?symbol={{ c.symbol }}">
                             {{ coin_icon(c.symbol) }}
-                            <span><div class="coin-name">{{ c.name }}</div><div class="coin-sym">{{ c.symbol }}</div></span>
+                            <span><div class="coin-name" title="{{ c.name }}">{{ c.name }}</div><div class="coin-sym">{{ c.symbol }}</div></span>
                         </a>
                     </td>
                     <td class="r num" style="font-weight:600">{{ c.price|price }}</td>
@@ -101,7 +101,7 @@
                     </td>
                     <td class="r num text-2 hide-sm">{{ c.volume|compact }}</td>
                     <td class="r num hide-sm">{{ c.market_cap|compact }}</td>
-                    <td class="r hide-sm"><canvas class="spark" width="120" height="36" data-spark='{{ c.spark|tojson }}'></canvas></td>
+                    <td class="r hide-sm"><canvas class="spark" width="110" height="36" data-spark='{{ c.spark|tojson }}'></canvas></td>
                 </tr>
                 {% endfor %}
                 </tbody>
