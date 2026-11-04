@@ -22,8 +22,8 @@ resources:
 
 images:
   - name: borislavgorg/dians-main-app
-    newTag: c79b167
+    newTag: 3850069
   - name: borislavgorg/dians-pipeline-service
-    newTag: c79b167
+    newTag: 3850069
   - name: borislavgorg/dians-technical-analysis-service
-    newTag: c79b167
+    newTag: 3850069
